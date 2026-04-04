@@ -9,10 +9,10 @@ const router = Router();
 
 router.use(authGuard);
 
-// Read endpoints — any authenticated user
-router.get("/", asyncHandler(listEmployees));
+// Read endpoints — Manager and Admin only (EMPLOYEE role cannot access employee management)
+router.get("/", requireRole("ADMIN", "MANAGER"), asyncHandler(listEmployees));
 router.get("/inactive", requireRole("ADMIN", "MANAGER"), asyncHandler(listInactiveEmployees));
-router.get("/:id", asyncHandler(getEmployee));
+router.get("/:id", requireRole("ADMIN", "MANAGER"), asyncHandler(getEmployee));
 
 // Write endpoints — Manager and Admin only
 router.post("/", requireRole("ADMIN", "MANAGER"), validate(createEmployeeSchema), asyncHandler(createEmployee));
