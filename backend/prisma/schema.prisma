@@ -74,9 +74,10 @@ model Employee {
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
-  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   shifts         Shift[]
   availabilities Availability[]
+  assignments    ShiftAssignment[]
 
   @@map("employees")
 }
@@ -113,10 +114,26 @@ model Shift {
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
-  schedule Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
-  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  schedule    Schedule          @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  employee    Employee          @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  assignments ShiftAssignment[]
 
   @@map("shifts")
+}
+
+model ShiftAssignment {
+  id         String   @id @default(cuid())
+  shiftId    String   @map("shift_id")
+  employeeId String   @map("employee_id")
+  assignedAt DateTime @default(now()) @map("assigned_at")
+
+  shift    Shift    @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([shiftId, employeeId])
+  @@index([shiftId])
+  @@index([employeeId])
+  @@map("shift_assignments")
 }
 
 model Availability {
