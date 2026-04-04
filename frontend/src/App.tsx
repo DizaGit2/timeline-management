@@ -8,6 +8,7 @@ import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { ShiftsPage } from './pages/ShiftsPage'
+import { SchedulePage } from './pages/SchedulePage'
 
 export function App() {
   return (
@@ -32,6 +33,7 @@ export function App() {
           {/* Shift management — Admin + Manager */}
           <Route element={<PrivateRoute roles={['ADMIN', 'MANAGER']} />}>
             <Route path="/shifts" element={<ShiftsPage />} />
+            <Route path="/schedule" element={<SchedulePage />} />
           </Route>
 
           {/* Admin-only routes */}

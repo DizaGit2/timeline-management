@@ -70,14 +70,16 @@ model Employee {
   phone          String?
   position       String?
   hourlyRate     Float?   @map("hourly_rate")
+  isActive       Boolean  @default(true) @map("is_active")
   organizationId String   @map("organization_id")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
-  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  shifts          Shift[]
-  shiftAssignments ShiftAssignment[]
-  availabilities  Availability[]
+  organization              Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  shifts                    Shift[]
+  shiftAssignments          ShiftAssignment[]
+  availabilities            Availability[]
+  unavailabilityExceptions  UnavailabilityException[]
 
   @@map("employees")
 }
@@ -156,4 +158,18 @@ enum AvailabilityType {
   AVAILABLE
   UNAVAILABLE
   PREFERRED
+}
+
+model UnavailabilityException {
+  id         String   @id @default(cuid())
+  employeeId String   @map("employee_id")
+  date       DateTime
+  reason     String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+  @@index([date])
+  @@map("unavailability_exceptions")
 }
