@@ -8,6 +8,7 @@ import userRoutes from "./routes/user";
 import employeeRoutes from "./routes/employee";
 import scheduleRoutes from "./routes/schedule";
 import shiftRoutes from "./routes/shift";
+import availabilityRoutes, { employeeAvailabilityRouter } from "./routes/availability";
 
 const app = express();
 
@@ -22,8 +23,10 @@ app.get("/api/health", (_req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/employees", employeeRoutes);
+app.use("/api/employees/:id", employeeAvailabilityRouter);
 app.use("/api/schedules", scheduleRoutes);
 app.use("/api/shifts", shiftRoutes);
+app.use("/api/availability", availabilityRoutes);
 
 app.use(errorHandler);
 
