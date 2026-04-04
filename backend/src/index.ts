@@ -14,6 +14,10 @@ import notificationRoutes from "./routes/notification";
 
 const app = express();
 
+// Trust the first proxy hop (nginx / AWS ALB / etc.) so that
+// X-Forwarded-For is used for req.ip — required for rate-limit key resolution.
+app.set("trust proxy", 1);
+
 app.use(helmet());
 app.use(cors({ origin: config.cors.origin, credentials: true }));
 app.use(express.json());
