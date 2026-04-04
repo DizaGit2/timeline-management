@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { listEmployees, getEmployee, createEmployee, updateEmployee, deleteEmployee } from "../controllers/employee";
 import { validate } from "../middleware/validate";
-import { authGuard } from "../middleware/authGuard";
+import { authGuard, requireRole } from "../middleware/authGuard";
 import { createEmployeeSchema, updateEmployeeSchema } from "../validators/employee";
 import { asyncHandler } from "../lib/asyncHandler";
 
@@ -11,8 +11,8 @@ router.use(authGuard);
 
 router.get("/", asyncHandler(listEmployees));
 router.get("/:id", asyncHandler(getEmployee));
-router.post("/", validate(createEmployeeSchema), asyncHandler(createEmployee));
-router.put("/:id", validate(updateEmployeeSchema), asyncHandler(updateEmployee));
-router.delete("/:id", asyncHandler(deleteEmployee));
+router.post("/", requireRole("ADMIN", "MANAGER"), validate(createEmployeeSchema), asyncHandler(createEmployee));
+router.put("/:id", requireRole("ADMIN", "MANAGER"), validate(updateEmployeeSchema), asyncHandler(updateEmployee));
+router.delete("/:id", requireRole("ADMIN", "MANAGER"), asyncHandler(deleteEmployee));
 
 export default router;

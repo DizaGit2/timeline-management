@@ -24,13 +24,41 @@ const shiftInclude = {
 
 export async function listShifts(req: Request, res: Response): Promise<void> {
   const organizationId = req.user!.organizationId;
-  const { scheduleId, employeeId, from, to } = req.query;
+  const { scheduleId, employeeId: rawEmployeeId, from, to } = req.query;
+
+  // Resolve "me" — look up the Employee record matching the current user's email
+  let employeeId = rawEmployeeId as string | undefined;
+  if (rawEmployeeId === "me") {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user!.userId },
+      select: { email: true },
+    });
+    if (user?.email) {
+      const emp = await prisma.employee.findFirst({
+        where: { organizationId, email: user.email },
+        select: { id: true },
+      });
+      employeeId = emp?.id;
+    }
+    if (!employeeId) {
+      res.json([]);
+      return;
+    }
+  }
 
   const shifts = await prisma.shift.findMany({
     where: {
       schedule: { organizationId },
       ...(scheduleId ? { scheduleId: scheduleId as string } : {}),
-      ...(employeeId ? { employeeId: employeeId as string } : {}),
+      // Include shifts assigned via legacy employeeId field OR via ShiftAssignment
+      ...(employeeId
+        ? {
+            OR: [
+              { employeeId },
+              { assignments: { some: { employeeId } } },
+            ],
+          }
+        : {}),
       ...(from || to
         ? {
             startTime: {
