@@ -9,6 +9,10 @@ import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { ShiftsPage } from './pages/ShiftsPage'
 import { SchedulePage } from './pages/SchedulePage'
+import { EmployeesPage } from './pages/EmployeesPage'
+import { MySchedulePage } from './pages/MySchedulePage'
+import { AvailabilityPage } from './pages/AvailabilityPage'
+import { ReportsPage } from './pages/ReportsPage'
 
 export function App() {
   return (
@@ -28,12 +32,16 @@ export function App() {
           {/* Protected routes — all authenticated roles */}
           <Route element={<PrivateRoute />}>
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/my-schedule" element={<MySchedulePage />} />
+            <Route path="/availability/:employeeId" element={<AvailabilityPage />} />
           </Route>
 
           {/* Shift management — Admin + Manager */}
           <Route element={<PrivateRoute roles={['ADMIN', 'MANAGER']} />}>
             <Route path="/shifts" element={<ShiftsPage />} />
             <Route path="/schedule" element={<SchedulePage />} />
+            <Route path="/employees" element={<EmployeesPage />} />
+            <Route path="/reports" element={<ReportsPage />} />
           </Route>
 
           {/* Admin-only routes */}
