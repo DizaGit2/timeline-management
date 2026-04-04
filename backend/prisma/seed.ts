@@ -86,8 +86,11 @@ async function main() {
     data: {
       scheduleId: schedule.id,
       employeeId: emp1.id,
+      title: "Morning Shift",
       startTime: shift1Start,
       endTime: shift1End,
+      role: "Cashier",
+      requiredHeadcount: 2,
       notes: "Morning shift",
     },
   });
@@ -101,8 +104,11 @@ async function main() {
     data: {
       scheduleId: schedule.id,
       employeeId: emp2.id,
+      title: "Afternoon Shift",
       startTime: shift2Start,
       endTime: shift2End,
+      role: "Supervisor",
+      requiredHeadcount: 1,
       notes: "Afternoon shift",
     },
   });

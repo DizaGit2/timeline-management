@@ -37,7 +37,6 @@ model User {
 
   organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   refreshTokens RefreshToken[]
-  notifications Notification[]
 
   @@index([organizationId])
   @@map("users")
@@ -75,10 +74,10 @@ model Employee {
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
-  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  shifts         Shift[]
-  availabilities Availability[]
-  assignments    ShiftAssignment[]
+  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  shifts          Shift[]
+  shiftAssignments ShiftAssignment[]
+  availabilities  Availability[]
 
   @@map("employees")
 }
@@ -106,24 +105,27 @@ enum ScheduleStatus {
 }
 
 model Shift {
-  id         String   @id @default(uuid())
-  scheduleId String   @map("schedule_id")
-  employeeId String   @map("employee_id")
-  startTime  DateTime @map("start_time")
-  endTime    DateTime @map("end_time")
-  notes      String?
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  id                String   @id @default(uuid())
+  scheduleId        String   @map("schedule_id")
+  employeeId        String?  @map("employee_id")
+  title             String
+  startTime         DateTime @map("start_time")
+  endTime           DateTime @map("end_time")
+  location          String?
+  role              String?
+  requiredHeadcount Int      @default(1) @map("required_headcount")
+  notes             String?
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   schedule    Schedule          @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
-  employee    Employee          @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employee    Employee?         @relation(fields: [employeeId], references: [id], onDelete: SetNull)
   assignments ShiftAssignment[]
 
   @@map("shifts")
 }
 
 model ShiftAssignment {
-  id         String   @id @default(cuid())
   shiftId    String   @map("shift_id")
   employeeId String   @map("employee_id")
   assignedAt DateTime @default(now()) @map("assigned_at")
@@ -131,9 +133,7 @@ model ShiftAssignment {
   shift    Shift    @relation(fields: [shiftId], references: [id], onDelete: Cascade)
   employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
-  @@unique([shiftId, employeeId])
-  @@index([shiftId])
-  @@index([employeeId])
+  @@id([shiftId, employeeId])
   @@map("shift_assignments")
 }
 
@@ -156,25 +156,4 @@ enum AvailabilityType {
   AVAILABLE
   UNAVAILABLE
   PREFERRED
-}
-
-model Notification {
-  id        String           @id @default(cuid())
-  userId    String           @map("user_id")
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type      NotificationType
-  shiftId   String?          @map("shift_id")
-  message   String
-  read      Boolean          @default(false)
-  createdAt DateTime         @default(now()) @map("created_at")
-
-  @@index([userId])
-  @@index([userId, read])
-  @@map("notifications")
-}
-
-enum NotificationType {
-  SHIFT_ASSIGNED
-  SHIFT_UPDATED
-  SHIFT_REMOVED
 }
