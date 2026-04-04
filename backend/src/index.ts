@@ -9,6 +9,8 @@ import employeeRoutes from "./routes/employee";
 import scheduleRoutes from "./routes/schedule";
 import shiftRoutes from "./routes/shift";
 import availabilityRoutes, { employeeAvailabilityRouter } from "./routes/availability";
+import reportRoutes from "./routes/report";
+import notificationRoutes from "./routes/notification";
 
 const app = express();
 
@@ -27,6 +29,8 @@ app.use("/api/employees/:id", employeeAvailabilityRouter);
 app.use("/api/schedules", scheduleRoutes);
 app.use("/api/shifts", shiftRoutes);
 app.use("/api/availability", availabilityRoutes);
+app.use("/api/reports", reportRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 app.use(errorHandler);
 

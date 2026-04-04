@@ -37,6 +37,7 @@ model User {
 
   organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   refreshTokens RefreshToken[]
+  notifications Notification[]
 
   @@index([organizationId])
   @@map("users")
@@ -172,4 +173,28 @@ model UnavailabilityException {
   @@index([employeeId])
   @@index([date])
   @@map("unavailability_exceptions")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String           @map("user_id")
+  type      NotificationType
+  title     String
+  body      String
+  isRead    Boolean          @default(false) @map("is_read")
+  metadata  Json?
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  SHIFT_ASSIGNED
+  SHIFT_UPDATED
+  SHIFT_REMOVED
+  SCHEDULE_PUBLISHED
 }

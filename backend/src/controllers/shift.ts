@@ -6,6 +6,7 @@ import {
   UpdateShiftInput,
   AssignEmployeesInput,
 } from "../validators/shift";
+import { notifyShiftAssigned, notifyShiftUpdated, notifyShiftRemoved } from "../lib/notifications";
 
 const shiftInclude = {
   employee: {
@@ -157,6 +158,25 @@ export async function updateShift(req: Request, res: Response): Promise<void> {
     include: shiftInclude,
   });
 
+  // Fire-and-forget: notify assigned employees of shift changes
+  const changedFields = Object.keys(updateData).filter((k) => !["employeeId"].includes(k));
+  if (changedFields.length > 0 && shift.assignments.length > 0) {
+    const shiftDate = shift.startTime.toISOString().split("T")[0];
+    const changes = changedFields.join(", ");
+    const empEmails = shift.assignments
+      .map((a) => a.employee)
+      .filter((e): e is { id: string; firstName: string; lastName: string; position: string | null } => !!e);
+    const empRecords = await prisma.employee.findMany({
+      where: { id: { in: empEmails.map((e) => e.id) }, email: { not: null } },
+      select: { email: true },
+    });
+    const userRecords = await prisma.user.findMany({
+      where: { email: { in: empRecords.map((e) => e.email!).filter(Boolean) }, organizationId },
+      select: { id: true, email: true },
+    });
+    notifyShiftUpdated(shift.title, shiftDate, changes, userRecords.map((u) => ({ userId: u.id, email: u.email }))).catch(() => {});
+  }
+
   res.json(shift);
 }
 
@@ -208,6 +228,18 @@ export async function assignEmployees(
     include: shiftInclude,
   });
 
+  // Fire-and-forget: notify assigned employees
+  const shiftDate = shift.startTime.toISOString().split("T")[0];
+  const assignedEmployees = await prisma.employee.findMany({
+    where: { id: { in: employeeIds }, organizationId, email: { not: null } },
+    select: { email: true },
+  });
+  const userRecords = await prisma.user.findMany({
+    where: { email: { in: assignedEmployees.map((e) => e.email!).filter(Boolean) }, organizationId },
+    select: { id: true, email: true },
+  });
+  notifyShiftAssigned(shift.title, shiftDate, userRecords.map((u) => ({ userId: u.id, email: u.email }))).catch(() => {});
+
   res.json(updated);
 }
 
@@ -232,6 +264,16 @@ export async function removeAssignment(
   await prisma.shiftAssignment.delete({
     where: { shiftId_employeeId: { shiftId: id, employeeId: eid } },
   });
+
+  // Fire-and-forget: notify removed employee
+  const removedEmp = await prisma.employee.findUnique({ where: { id: eid }, select: { email: true } });
+  if (removedEmp?.email) {
+    const removedUser = await prisma.user.findFirst({ where: { email: removedEmp.email, organizationId }, select: { id: true, email: true } });
+    if (removedUser) {
+      const shiftDate = shift.startTime.toISOString().split("T")[0];
+      notifyShiftRemoved(shift.title, shiftDate, removedUser.id, removedUser.email).catch(() => {});
+    }
+  }
 
   res.status(204).send();
 }
