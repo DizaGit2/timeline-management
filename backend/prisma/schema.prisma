@@ -1,0 +1,200 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  ownerUserId String   @map("owner_user_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  users     User[]
+  employees Employee[]
+  schedules Schedule[]
+
+  @@map("organizations")
+}
+
+model User {
+  id                  String    @id @default(cuid())
+  email               String    @unique
+  passwordHash        String    @map("password_hash")
+  name                String?
+  role                Role      @default(EMPLOYEE)
+  organizationId      String    @map("organization_id")
+  createdByUserId     String?   @map("created_by_user_id")
+  isActive            Boolean   @default(true) @map("is_active")
+  resetToken          String?   @unique @map("reset_token")
+  resetTokenExpiresAt DateTime? @map("reset_token_expires_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  refreshTokens RefreshToken[]
+  notifications Notification[]
+
+  @@index([organizationId])
+  @@map("users")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  EMPLOYEE
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  tokenHash String   @unique @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model Employee {
+  id             String   @id @default(uuid())
+  firstName      String   @map("first_name")
+  lastName       String   @map("last_name")
+  email          String?
+  phone          String?
+  position       String?
+  hourlyRate     Float?   @map("hourly_rate")
+  isActive       Boolean  @default(true) @map("is_active")
+  organizationId String   @map("organization_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization              Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  shifts                    Shift[]
+  shiftAssignments          ShiftAssignment[]
+  availabilities            Availability[]
+  unavailabilityExceptions  UnavailabilityException[]
+
+  @@map("employees")
+}
+
+model Schedule {
+  id             String         @id @default(uuid())
+  name           String
+  startDate      DateTime       @map("start_date")
+  endDate        DateTime       @map("end_date")
+  status         ScheduleStatus @default(DRAFT)
+  organizationId String         @map("organization_id")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  shifts       Shift[]
+
+  @@map("schedules")
+}
+
+enum ScheduleStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model Shift {
+  id                String   @id @default(uuid())
+  scheduleId        String   @map("schedule_id")
+  employeeId        String?  @map("employee_id")
+  title             String
+  startTime         DateTime @map("start_time")
+  endTime           DateTime @map("end_time")
+  location          String?
+  role              String?
+  requiredHeadcount Int      @default(1) @map("required_headcount")
+  notes             String?
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  schedule    Schedule          @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  employee    Employee?         @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  assignments ShiftAssignment[]
+
+  @@map("shifts")
+}
+
+model ShiftAssignment {
+  shiftId    String   @map("shift_id")
+  employeeId String   @map("employee_id")
+  assignedAt DateTime @default(now()) @map("assigned_at")
+
+  shift    Shift    @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@id([shiftId, employeeId])
+  @@map("shift_assignments")
+}
+
+model Availability {
+  id         String           @id @default(uuid())
+  employeeId String           @map("employee_id")
+  dayOfWeek  Int              @map("day_of_week")
+  startTime  String           @map("start_time")
+  endTime    String           @map("end_time")
+  type       AvailabilityType @default(AVAILABLE)
+  createdAt  DateTime         @default(now()) @map("created_at")
+  updatedAt  DateTime         @updatedAt @map("updated_at")
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@map("availabilities")
+}
+
+enum AvailabilityType {
+  AVAILABLE
+  UNAVAILABLE
+  PREFERRED
+}
+
+model UnavailabilityException {
+  id         String   @id @default(cuid())
+  employeeId String   @map("employee_id")
+  date       DateTime
+  reason     String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+  @@index([date])
+  @@map("unavailability_exceptions")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String           @map("user_id")
+  type      NotificationType
+  title     String
+  body      String
+  isRead    Boolean          @default(false) @map("is_read")
+  metadata  Json?
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  SHIFT_ASSIGNED
+  SHIFT_UPDATED
+  SHIFT_REMOVED
+  SCHEDULE_PUBLISHED
+}
