@@ -1,18 +1,22 @@
 import { Router } from "express";
-import { listSchedules, getSchedule, createSchedule, updateSchedule, deleteSchedule } from "../controllers/schedule";
+import { listSchedules, getSchedule, createSchedule, updateSchedule, deleteSchedule, copyWeek } from "../controllers/schedule";
 import { validate } from "../middleware/validate";
-import { authGuard } from "../middleware/authGuard";
-import { createScheduleSchema, updateScheduleSchema } from "../validators/schedule";
+import { authGuard, requireRole } from "../middleware/authGuard";
+import { createScheduleSchema, updateScheduleSchema, copyWeekSchema } from "../validators/schedule";
 import { asyncHandler } from "../lib/asyncHandler";
 
 const router = Router();
 
 router.use(authGuard);
 
+// Read endpoints — any authenticated user
 router.get("/", asyncHandler(listSchedules));
 router.get("/:id", asyncHandler(getSchedule));
-router.post("/", validate(createScheduleSchema), asyncHandler(createSchedule));
-router.put("/:id", validate(updateScheduleSchema), asyncHandler(updateSchedule));
-router.delete("/:id", asyncHandler(deleteSchedule));
+
+// Write endpoints — Manager and Admin only
+router.post("/copy-week", requireRole("MANAGER", "ADMIN"), validate(copyWeekSchema), asyncHandler(copyWeek));
+router.post("/", requireRole("MANAGER", "ADMIN"), validate(createScheduleSchema), asyncHandler(createSchedule));
+router.put("/:id", requireRole("MANAGER", "ADMIN"), validate(updateScheduleSchema), asyncHandler(updateSchedule));
+router.delete("/:id", requireRole("MANAGER", "ADMIN"), asyncHandler(deleteSchedule));
 
 export default router;

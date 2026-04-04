@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import prisma from "../lib/prisma";
 import { AppError } from "../middleware/errorHandler";
-import { CreateScheduleInput, UpdateScheduleInput } from "../validators/schedule";
+import { CreateScheduleInput, UpdateScheduleInput, CopyWeekInput } from "../validators/schedule";
 
 export async function listSchedules(req: Request, res: Response): Promise<void> {
   const organizationId = req.user!.organizationId;
@@ -89,4 +89,70 @@ export async function deleteSchedule(req: Request, res: Response): Promise<void>
   await prisma.schedule.delete({ where: { id } });
 
   res.status(204).send();
+}
+
+export async function copyWeek(req: Request, res: Response): Promise<void> {
+  const organizationId = req.user!.organizationId;
+  const { sourceWeekStart, targetWeekStart } = req.body as CopyWeekInput;
+
+  if (sourceWeekStart === targetWeekStart) {
+    throw new AppError(400, "Cannot copy to the same week");
+  }
+
+  const sourceStart = new Date(`${sourceWeekStart}T00:00:00.000Z`);
+  const sourceEnd = new Date(sourceStart);
+  sourceEnd.setUTCDate(sourceEnd.getUTCDate() + 7);
+
+  const targetStart = new Date(`${targetWeekStart}T00:00:00.000Z`);
+  const targetEnd = new Date(targetStart);
+  targetEnd.setUTCDate(targetEnd.getUTCDate() + 7);
+
+  // Calculate offset in milliseconds between source and target weeks
+  const offsetMs = targetStart.getTime() - sourceStart.getTime();
+
+  // Find all shifts in the source week for this org
+  const sourceShifts = await prisma.shift.findMany({
+    where: {
+      schedule: { organizationId },
+      startTime: { gte: sourceStart, lt: sourceEnd },
+    },
+  });
+
+  if (sourceShifts.length === 0) {
+    throw new AppError(404, "No shifts found in source week");
+  }
+
+  // Check if target week already has shifts
+  const existingTargetShifts = await prisma.shift.findMany({
+    where: {
+      schedule: { organizationId },
+      startTime: { gte: targetStart, lt: targetEnd },
+    },
+    take: 1,
+  });
+
+  if (existingTargetShifts.length > 0) {
+    throw new AppError(409, "Target week already has shifts");
+  }
+
+  // Create copies with offset dates
+  const copiedShifts = await Promise.all(
+    sourceShifts.map((shift) =>
+      prisma.shift.create({
+        data: {
+          scheduleId: shift.scheduleId,
+          employeeId: shift.employeeId,
+          title: shift.title,
+          startTime: new Date(shift.startTime.getTime() + offsetMs),
+          endTime: new Date(shift.endTime.getTime() + offsetMs),
+          location: shift.location,
+          role: shift.role,
+          requiredHeadcount: shift.requiredHeadcount,
+          notes: shift.notes,
+        },
+      })
+    )
+  );
+
+  res.status(201).json({ shifts: copiedShifts });
 }
