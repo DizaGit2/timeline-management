@@ -26,7 +26,7 @@ router.post("/register", validate(registerSchema), asyncHandler(register));
 router.post("/login", loginLimiter, validate(loginSchema), asyncHandler(login));
 router.post("/refresh", validate(refreshSchema), asyncHandler(refresh));
 router.post("/logout", authGuard, asyncHandler(logout));
-router.post("/forgot-password", validate(forgotPasswordSchema), asyncHandler(forgotPassword));
+router.post("/forgot-password", loginLimiter, validate(forgotPasswordSchema), asyncHandler(forgotPassword));
 router.post("/reset-password", validate(resetPasswordSchema), asyncHandler(resetPassword));
 
 export default router;
