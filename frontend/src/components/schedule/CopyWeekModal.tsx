@@ -50,19 +50,19 @@ export function CopyWeekModal({ isOpen, sourceWeekStart, onClose, onSuccess }: P
 
   const sourceISO = toISODate(sourceWeekStart);
   const targetWeekStart = targetValue ? getWeekStart(targetValue) : null;
-  const targetISO = targetWeekStart ? toISODate(targetWeekStart) : null;
+  const targetISO = targetValue ? targetValue : null;
 
-  const isSameWeek = targetISO === sourceISO;
+  const isSameWeek = targetISO !== null && targetISO === sourceISO;
   const isDisabled = !targetISO || isSameWeek || loading;
 
   async function handleConfirm() {
-    if (!targetISO) return;
+    if (!targetWeekStart) return;
     setLoading(true);
     setError(null);
     try {
       const { data } = await axios.post<CopyWeekResult>(
         `${API}/api/schedules/copy-week`,
-        { sourceWeekStart: sourceISO, targetWeekStart: targetISO },
+        { sourceWeekStart: sourceISO, targetWeekStart: toISODate(targetWeekStart) },
         { headers: authHeader() }
       );
       onSuccess(data);

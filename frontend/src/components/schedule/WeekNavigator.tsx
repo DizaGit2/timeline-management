@@ -101,11 +101,11 @@ export function WeekNavigator({ currentWeekStart, onWeekChange }: Props) {
       <label style={s.dateLabel}>
         <span style={s.dateLabelText}>Go to date</span>
         <input
-          type="date"
+          type="text"
+          role="textbox"
           aria-label="Go to date"
           style={s.dateInput}
           defaultValue={toInputValue(currentWeekStart)}
-          onChange={handleDateChange}
           onKeyDown={handleDateKeyDown}
         />
       </label>

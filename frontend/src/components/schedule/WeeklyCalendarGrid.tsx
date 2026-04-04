@@ -232,7 +232,7 @@ function ShiftBlock({ shift, readOnly, onDragEnd }: ShiftBlockProps) {
       ? shift.assignments.map((a) => `${a.employee.firstName} ${a.employee.lastName}`).join(", ")
       : shift.employee
       ? `${shift.employee.firstName} ${shift.employee.lastName}`
-      : "Unassigned";
+      : null;
 
   // Listen for custom dnd-drag-end events for testability
   const handleDragEndEvent = useCallback(
@@ -250,7 +250,6 @@ function ShiftBlock({ shift, readOnly, onDragEnd }: ShiftBlockProps) {
         ...s.shiftBlock,
         ...(shift.role ? getRoleStyle(shift.role) : {}),
       }}
-      onDragEndEvent={undefined as never}
       ref={(el) => {
         if (el) {
           el.removeEventListener("dnd-drag-end", handleDragEndEvent);
@@ -259,7 +258,7 @@ function ShiftBlock({ shift, readOnly, onDragEnd }: ShiftBlockProps) {
       }}
     >
       <div style={s.shiftTitle}>{shift.title}</div>
-      <div style={s.shiftEmployee}>{employeeName}</div>
+      {employeeName && <div style={s.shiftEmployee}>{employeeName}</div>}
       <div style={s.shiftTime}>
         {formatTime(shift.startTime)} – {formatTime(shift.endTime)}
       </div>
