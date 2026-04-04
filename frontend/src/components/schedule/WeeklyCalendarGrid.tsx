@@ -47,7 +47,9 @@ function getDayIndex(weekStart: Date, shiftDate: Date): number {
 
 function formatTime(iso: string): string {
   const d = new Date(iso);
-  return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  const h = String(d.getUTCHours()).padStart(2, "0");
+  const m = String(d.getUTCMinutes()).padStart(2, "0");
+  return `${h}:${m}`;
 }
 
 function formatDayHeader(date: Date): string {
@@ -101,8 +103,10 @@ export function WeeklyCalendarGrid({ shifts, weekStart, onShiftMove, filter, rea
       const originalEnd = new Date(shift.endTime);
       const durationMs = originalEnd.getTime() - originalStart.getTime();
 
-      // Compute new start date from targetDayIndex
-      const targetDay = weekDays[targetDayIndex];
+      // targetDayIndex is 1-indexed day-of-week (Sun=1, Mon=2, Tue=3, Wed=4, Thu=5, Fri=6, Sat=7)
+      // Find the date in the displayed week with matching UTC day-of-week
+      const targetDayOfWeek = targetDayIndex - 1;
+      const targetDay = weekDays.find((d) => d.getUTCDay() === targetDayOfWeek) ?? weekDays[0];
       const newStart = new Date(targetDay);
 
       if (targetHour !== undefined) {
