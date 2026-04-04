@@ -37,6 +37,7 @@ model User {
 
   organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   refreshTokens RefreshToken[]
+  notifications Notification[]
 
   @@index([organizationId])
   @@map("users")
@@ -155,4 +156,25 @@ enum AvailabilityType {
   AVAILABLE
   UNAVAILABLE
   PREFERRED
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String           @map("user_id")
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  shiftId   String?          @map("shift_id")
+  message   String
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([userId, read])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  SHIFT_ASSIGNED
+  SHIFT_UPDATED
+  SHIFT_REMOVED
 }
