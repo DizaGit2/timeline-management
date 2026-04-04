@@ -1,0 +1,131 @@
+import { useAuth } from '../contexts/AuthContext'
+
+const ROLE_BADGE: Record<string, string> = {
+  ADMIN: '#6366f1',
+  MANAGER: '#0ea5e9',
+  VIEWER: '#64748b',
+}
+
+export function DashboardPage() {
+  const { user, logout } = useAuth()
+
+  return (
+    <div style={s.page}>
+      <header style={s.header}>
+        <div style={s.brand}>
+          <span style={s.logo}>⏱</span>
+          <span style={s.brandName}>Timeline Management</span>
+        </div>
+        <div style={s.headerRight}>
+          {user && (
+            <span
+              style={{
+                ...s.roleBadge,
+                background: ROLE_BADGE[user.role] ?? '#64748b',
+              }}
+            >
+              {user.role}
+            </span>
+          )}
+          <button onClick={() => void logout()} style={s.logoutBtn}>
+            Sign out
+          </button>
+        </div>
+      </header>
+
+      <main style={s.main}>
+        <h1 style={s.heading}>
+          Welcome back{user?.name ? `, ${user.name}` : ''}!
+        </h1>
+        <p style={s.sub}>
+          You are signed in as <strong>{user?.email}</strong> with role{' '}
+          <strong>{user?.role}</strong>.
+        </p>
+
+        <div style={s.grid}>
+          <StatCard label="Schedules" value="—" color="#6366f1" />
+          <StatCard label="Employees" value="—" color="#0ea5e9" />
+          <StatCard label="Shifts this week" value="—" color="#10b981" />
+        </div>
+
+        <div style={s.placeholder}>
+          <p style={s.placeholderText}>
+            Dashboard content will be built in subsequent sprints.
+          </p>
+        </div>
+      </main>
+    </div>
+  )
+}
+
+function StatCard({
+  label,
+  value,
+  color,
+}: {
+  label: string
+  value: string
+  color: string
+}) {
+  return (
+    <div style={{ ...s.card, borderTop: `4px solid ${color}` }}>
+      <p style={s.cardValue}>{value}</p>
+      <p style={s.cardLabel}>{label}</p>
+    </div>
+  )
+}
+
+const s: Record<string, React.CSSProperties> = {
+  page: { minHeight: '100vh', background: '#f8fafc' },
+  header: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '0 2rem',
+    height: 60,
+    background: '#fff',
+    borderBottom: '1px solid #e2e8f0',
+  },
+  brand: { display: 'flex', alignItems: 'center', gap: 8 },
+  logo: { fontSize: 22 },
+  brandName: { fontSize: 16, fontWeight: 700, color: '#1e293b' },
+  headerRight: { display: 'flex', alignItems: 'center', gap: 12 },
+  roleBadge: {
+    padding: '2px 10px',
+    borderRadius: 20,
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: '0.5px',
+  },
+  logoutBtn: {
+    padding: '6px 14px',
+    border: '1.5px solid #e2e8f0',
+    borderRadius: 8,
+    background: '#fff',
+    fontSize: 13,
+    fontWeight: 600,
+    color: '#475569',
+    cursor: 'pointer',
+  },
+  main: { padding: '2rem', maxWidth: 960, margin: '0 auto' },
+  heading: { margin: '0 0 0.5rem', fontSize: 26, fontWeight: 700, color: '#1e293b' },
+  sub: { margin: '0 0 2rem', fontSize: 14, color: '#64748b' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, marginBottom: '2rem' },
+  card: {
+    background: '#fff',
+    borderRadius: 12,
+    padding: '1.25rem 1.5rem',
+    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+  },
+  cardValue: { margin: '0 0 4px', fontSize: 28, fontWeight: 700, color: '#1e293b' },
+  cardLabel: { margin: 0, fontSize: 13, color: '#64748b' },
+  placeholder: {
+    background: '#fff',
+    border: '2px dashed #e2e8f0',
+    borderRadius: 12,
+    padding: '3rem',
+    textAlign: 'center',
+  },
+  placeholderText: { margin: 0, color: '#94a3b8', fontSize: 14 },
+}

@@ -32,6 +32,9 @@
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.7.2"
   },
+  "prisma": {
+    "seed": "ts-node-dev prisma/seed.ts"
+  },
   "engines": {
     "node": ">=20.0.0"
   }
