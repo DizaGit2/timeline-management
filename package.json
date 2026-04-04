@@ -1,0 +1,38 @@
+{
+  "name": "timeline-management",
+  "version": "1.0.0",
+  "description": "Web platform for workforce scheduling.",
+  "main": "index.js",
+  "scripts": {
+    "db:migrate": "npx prisma migrate dev",
+    "db:seed": "npx prisma db seed",
+    "db:reset": "npx prisma migrate reset",
+    "db:studio": "npx prisma studio",
+    "prisma:generate": "npx prisma generate"
+  },
+  "prisma": {
+    "seed": "npx ts-node prisma/seed.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DizaGit2/timeline-management.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/DizaGit2/timeline-management/issues"
+  },
+  "homepage": "https://github.com/DizaGit2/timeline-management#readme",
+  "dependencies": {
+    "@prisma/client": "^7.6.0",
+    "dotenv": "^17.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.2",
+    "prisma": "^7.6.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.2"
+  }
+}
