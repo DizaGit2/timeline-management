@@ -19,8 +19,8 @@ function hashToken(token: string): string {
 }
 
 function generateTokens(payload: JwtPayload) {
-  const accessOpts: SignOptions = { expiresIn: config.jwt.expiresIn as SignOptions["expiresIn"] };
-  const refreshOpts: SignOptions = { expiresIn: config.jwt.refreshExpiresIn as SignOptions["expiresIn"] };
+  const accessOpts: SignOptions = { algorithm: "HS256", expiresIn: config.jwt.expiresIn as SignOptions["expiresIn"] };
+  const refreshOpts: SignOptions = { algorithm: "HS256", expiresIn: config.jwt.refreshExpiresIn as SignOptions["expiresIn"] };
   const accessToken = jwt.sign(payload, config.jwt.secret, accessOpts);
   const refreshToken = jwt.sign(payload, config.jwt.refreshSecret, refreshOpts);
   return { accessToken, refreshToken };
@@ -131,7 +131,7 @@ export async function refresh(req: Request, res: Response): Promise<void> {
 
   let decoded: JwtPayload;
   try {
-    decoded = jwt.verify(refreshToken, config.jwt.refreshSecret) as JwtPayload;
+    decoded = jwt.verify(refreshToken, config.jwt.refreshSecret, { algorithms: ["HS256"] }) as JwtPayload;
   } catch {
     throw new AppError(401, "Invalid refresh token");
   }

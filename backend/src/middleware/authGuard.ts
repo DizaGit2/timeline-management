@@ -27,7 +27,7 @@ export function authGuard(req: Request, _res: Response, next: NextFunction): voi
   const token = authHeader.slice(7);
 
   try {
-    const payload = jwt.verify(token, config.jwt.secret) as JwtPayload;
+    const payload = jwt.verify(token, config.jwt.secret, { algorithms: ["HS256"] }) as JwtPayload;
     req.user = payload;
     next();
   } catch {
