@@ -5,9 +5,24 @@ import { CreateEmployeeInput, UpdateEmployeeInput } from "../validators/employee
 
 export async function listEmployees(req: Request, res: Response): Promise<void> {
   const organizationId = req.user!.organizationId;
+  const includeInactive = req.query.includeInactive === "true";
 
   const employees = await prisma.employee.findMany({
-    where: { organizationId },
+    where: {
+      organizationId,
+      ...(!includeInactive ? { isActive: true } : {}),
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  res.json(employees);
+}
+
+export async function listInactiveEmployees(req: Request, res: Response): Promise<void> {
+  const organizationId = req.user!.organizationId;
+
+  const employees = await prisma.employee.findMany({
+    where: { organizationId, isActive: false },
     orderBy: { createdAt: "desc" },
   });
 
@@ -74,7 +89,35 @@ export async function deleteEmployee(req: Request, res: Response): Promise<void>
     throw new AppError(404, "Employee not found");
   }
 
-  await prisma.employee.delete({ where: { id } });
+  // Soft delete: set isActive to false
+  await prisma.employee.update({
+    where: { id },
+    data: { isActive: false },
+  });
 
   res.status(204).send();
+}
+
+export async function reactivateEmployee(req: Request, res: Response): Promise<void> {
+  const organizationId = req.user!.organizationId;
+  const id = req.params.id as string;
+
+  const existing = await prisma.employee.findFirst({
+    where: { id, organizationId },
+  });
+
+  if (!existing) {
+    throw new AppError(404, "Employee not found");
+  }
+
+  if (existing.isActive) {
+    throw new AppError(400, "Employee is already active");
+  }
+
+  const employee = await prisma.employee.update({
+    where: { id },
+    data: { isActive: true },
+  });
+
+  res.json(employee);
 }
