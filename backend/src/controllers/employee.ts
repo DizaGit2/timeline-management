@@ -6,11 +6,32 @@ import { CreateEmployeeInput, UpdateEmployeeInput } from "../validators/employee
 export async function listEmployees(req: Request, res: Response): Promise<void> {
   const organizationId = req.user!.organizationId;
   const includeInactive = req.query.includeInactive === "true";
+  const search = req.query.search as string | undefined;
+  const status = req.query.status as string | undefined;
+
+  // Status filter: "active", "inactive", or omitted (defaults based on includeInactive)
+  let isActiveFilter: boolean | undefined;
+  if (status === "active") {
+    isActiveFilter = true;
+  } else if (status === "inactive") {
+    isActiveFilter = false;
+  } else if (!includeInactive) {
+    isActiveFilter = true;
+  }
 
   const employees = await prisma.employee.findMany({
     where: {
       organizationId,
-      ...(!includeInactive ? { isActive: true } : {}),
+      ...(isActiveFilter !== undefined ? { isActive: isActiveFilter } : {}),
+      ...(search
+        ? {
+            OR: [
+              { firstName: { contains: search, mode: "insensitive" } },
+              { lastName: { contains: search, mode: "insensitive" } },
+              { email: { contains: search, mode: "insensitive" } },
+            ],
+          }
+        : {}),
     },
     orderBy: { createdAt: "desc" },
   });
