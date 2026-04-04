@@ -7,6 +7,7 @@ import { RegisterPage } from './pages/RegisterPage'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { DashboardPage } from './pages/DashboardPage'
+import { ShiftsPage } from './pages/ShiftsPage'
 
 export function App() {
   return (
@@ -26,6 +27,11 @@ export function App() {
           {/* Protected routes — all authenticated roles */}
           <Route element={<PrivateRoute />}>
             <Route path="/dashboard" element={<DashboardPage />} />
+          </Route>
+
+          {/* Shift management — Admin + Manager */}
+          <Route element={<PrivateRoute roles={['ADMIN', 'MANAGER']} />}>
+            <Route path="/shifts" element={<ShiftsPage />} />
           </Route>
 
           {/* Admin-only routes */}

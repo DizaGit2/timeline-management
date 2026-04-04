@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
 const ROLE_BADGE: Record<string, string> = {
@@ -9,6 +10,8 @@ const ROLE_BADGE: Record<string, string> = {
 export function DashboardPage() {
   const { user, logout } = useAuth()
 
+  const isManagerOrAdmin = user?.role === 'ADMIN' || user?.role === 'MANAGER'
+
   return (
     <div style={s.page}>
       <header style={s.header}>
@@ -16,6 +19,13 @@ export function DashboardPage() {
           <span style={s.logo}>⏱</span>
           <span style={s.brandName}>Timeline Management</span>
         </div>
+        <nav style={s.nav}>
+          {isManagerOrAdmin && (
+            <Link to="/shifts" style={s.navLink}>
+              Shifts
+            </Link>
+          )}
+        </nav>
         <div style={s.headerRight}>
           {user && (
             <span
@@ -47,6 +57,18 @@ export function DashboardPage() {
           <StatCard label="Employees" value="—" color="#0ea5e9" />
           <StatCard label="Shifts this week" value="—" color="#10b981" />
         </div>
+
+        {isManagerOrAdmin && (
+          <div style={s.quickLinks}>
+            <h2 style={s.sectionTitle}>Quick Actions</h2>
+            <div style={s.quickLinkGrid}>
+              <Link to="/shifts" style={s.quickLink}>
+                <span style={s.quickLinkIcon}>📋</span>
+                <span>Manage Shifts</span>
+              </Link>
+            </div>
+          </div>
+        )}
 
         <div style={s.placeholder}>
           <p style={s.placeholderText}>
@@ -89,6 +111,16 @@ const s: Record<string, React.CSSProperties> = {
   brand: { display: 'flex', alignItems: 'center', gap: 8 },
   logo: { fontSize: 22 },
   brandName: { fontSize: 16, fontWeight: 700, color: '#1e293b' },
+  nav: { display: 'flex', gap: 4, alignItems: 'center' },
+  navLink: {
+    padding: '5px 12px',
+    borderRadius: 6,
+    fontSize: 14,
+    fontWeight: 500,
+    color: '#475569',
+    textDecoration: 'none',
+    background: 'transparent',
+  },
   headerRight: { display: 'flex', alignItems: 'center', gap: 12 },
   roleBadge: {
     padding: '2px 10px',
@@ -120,6 +152,24 @@ const s: Record<string, React.CSSProperties> = {
   },
   cardValue: { margin: '0 0 4px', fontSize: 28, fontWeight: 700, color: '#1e293b' },
   cardLabel: { margin: 0, fontSize: 13, color: '#64748b' },
+  quickLinks: { marginBottom: '2rem' },
+  sectionTitle: { margin: '0 0 12px', fontSize: 16, fontWeight: 600, color: '#1e293b' },
+  quickLinkGrid: { display: 'flex', gap: 12, flexWrap: 'wrap' as const },
+  quickLink: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '12px 18px',
+    background: '#fff',
+    border: '1px solid #e2e8f0',
+    borderRadius: 10,
+    textDecoration: 'none',
+    color: '#1e293b',
+    fontSize: 14,
+    fontWeight: 500,
+    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+  },
+  quickLinkIcon: { fontSize: 18 },
   placeholder: {
     background: '#fff',
     border: '2px dashed #e2e8f0',

@@ -1,6 +1,7 @@
+/// <reference types="vite/client" />
 import axios from "axios";
 
-const API = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
+const API = (import.meta as ImportMeta & { env: Record<string, string> }).env?.VITE_API_URL ?? "http://localhost:3000";
 
 export interface Employee {
   id: string;
@@ -14,12 +15,19 @@ export interface Schedule {
   name: string;
 }
 
+export interface ShiftAssignment {
+  employeeId: string;
+  assignedAt: string;
+  employee: Employee;
+}
+
 export interface Shift {
   id: string;
   scheduleId: string;
   schedule: Schedule;
   employeeId: string | null;
   employee: Employee | null;
+  assignments: ShiftAssignment[];
   title: string;
   startTime: string;
   endTime: string;
@@ -49,9 +57,16 @@ export interface CreateShiftPayload {
   employeeId?: string;
 }
 
-export interface UpdateShiftPayload extends Partial<Omit<CreateShiftPayload, "scheduleId">> {
+export type UpdateShiftPayload = {
+  title?: string;
+  startTime?: string;
+  endTime?: string;
+  location?: string;
+  role?: string;
+  requiredHeadcount?: number;
+  notes?: string;
   employeeId?: string | null;
-}
+};
 
 export interface ShiftFilters {
   scheduleId?: string;
@@ -100,16 +115,25 @@ export async function deleteShift(id: string): Promise<void> {
   await axios.delete(`${API}/api/shifts/${id}`, { headers: authHeader() });
 }
 
-export async function assignEmployee(
+export async function assignEmployees(
   shiftId: string,
-  employeeId: string | null
+  employeeIds: string[]
 ): Promise<Shift> {
-  const { data } = await axios.patch<Shift>(
+  const { data } = await axios.post<Shift>(
     `${API}/api/shifts/${shiftId}/assign`,
-    { employeeId },
+    { employeeIds },
     { headers: authHeader() }
   );
   return data;
+}
+
+export async function removeAssignment(
+  shiftId: string,
+  employeeId: string
+): Promise<void> {
+  await axios.delete(`${API}/api/shifts/${shiftId}/employees/${employeeId}`, {
+    headers: authHeader(),
+  });
 }
 
 export async function fetchShiftConflicts(

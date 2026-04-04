@@ -4,11 +4,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   createShift,
   updateShift,
+  assignEmployees,
+  removeAssignment,
   fetchEmployees,
   fetchSchedules,
   fetchShiftConflicts,
   Shift,
+  ShiftConflict,
   CreateShiftPayload,
+  UpdateShiftPayload,
 } from "../../api/shifts";
 import { ConflictWarning } from "./ConflictWarning";
 
@@ -45,13 +49,13 @@ export function ShiftFormModal({ shift, onClose }: Props) {
   const qc = useQueryClient();
   const isEdit = !!shift;
 
-  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>(
-    shift?.employeeId ? [shift.employeeId] : []
+  // For new shifts, track which employee IDs to assign after creation
+  // For edit shifts, show current assignments and allow toggling
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(
+    new Set(shift?.assignments?.map((a) => a.employeeId) ?? [])
   );
   const [empSearch, setEmpSearch] = useState("");
-  const [conflicts, setConflicts] = useState<
-    import("../../api/shifts").ShiftConflict[]
-  >([]);
+  const [conflicts, setConflicts] = useState<ShiftConflict[]>([]);
 
   const {
     register,
@@ -82,7 +86,14 @@ export function ShiftFormModal({ shift, onClose }: Props) {
   });
 
   const createMutation = useMutation({
-    mutationFn: (payload: CreateShiftPayload) => createShift(payload),
+    mutationFn: async (payload: CreateShiftPayload & { assignIds: string[] }) => {
+      const { assignIds, ...rest } = payload;
+      const created = await createShift(rest);
+      if (assignIds.length > 0) {
+        return assignEmployees(created.id, assignIds);
+      }
+      return created;
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["shifts"] });
       onClose();
@@ -90,8 +101,9 @@ export function ShiftFormModal({ shift, onClose }: Props) {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (payload: CreateShiftPayload) =>
-      updateShift(shift!.id, payload),
+    mutationFn: async (payload: UpdateShiftPayload) => {
+      return updateShift(shift!.id, payload);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["shifts"] });
       onClose();
@@ -103,52 +115,70 @@ export function ShiftFormModal({ shift, onClose }: Props) {
       ? "Failed to save shift. Please try again."
       : null;
 
-  async function checkConflicts(shiftId: string, empId: string) {
-    try {
-      const c = await fetchShiftConflicts(shiftId, empId);
-      setConflicts(c);
-    } catch {
-      // silently ignore
-    }
-  }
-
   async function handleEmployeeToggle(empId: string) {
-    const next = selectedEmployeeIds.includes(empId)
-      ? selectedEmployeeIds.filter((id) => id !== empId)
-      : [empId]; // single assignment for now
-
-    setSelectedEmployeeIds(next);
-    setConflicts([]);
-
-    if (next.length > 0 && shift) {
-      await checkConflicts(shift.id, next[0]);
+    const next = new Set(selectedIds);
+    if (next.has(empId)) {
+      next.delete(empId);
+      // For edit mode, immediately remove from server
+      if (isEdit) {
+        try {
+          await removeAssignment(shift!.id, empId);
+          qc.invalidateQueries({ queryKey: ["shifts"] });
+        } catch {
+          // revert
+          next.add(empId);
+        }
+      }
+    } else {
+      next.add(empId);
+      // For edit mode, immediately assign
+      if (isEdit) {
+        try {
+          await assignEmployees(shift!.id, [empId]);
+          qc.invalidateQueries({ queryKey: ["shifts"] });
+          // Check conflicts
+          const c = await fetchShiftConflicts(shift!.id, empId);
+          setConflicts((prev) => [...prev.filter((x) => x.shiftId !== empId), ...c]);
+        } catch {
+          next.delete(empId);
+        }
+      }
     }
+    setSelectedIds(next);
   }
 
   useEffect(() => {
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-    function handleKeyDown(e: KeyboardEvent) {
+    const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
-    }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
   async function onSubmit(values: FormValues) {
-    const payload: CreateShiftPayload = {
-      scheduleId: values.scheduleId,
-      title: values.title,
-      startTime: toISOString(values.date, values.startTime),
-      endTime: toISOString(values.date, values.endTime),
-      location: values.location || undefined,
-      role: values.role || undefined,
-      requiredHeadcount: values.requiredHeadcount,
-      notes: values.notes || undefined,
-      employeeId: selectedEmployeeIds[0] || undefined,
-    };
-
     if (isEdit) {
+      const payload: UpdateShiftPayload = {
+        title: values.title,
+        startTime: toISOString(values.date, values.startTime),
+        endTime: toISOString(values.date, values.endTime),
+        location: values.location || undefined,
+        role: values.role || undefined,
+        requiredHeadcount: values.requiredHeadcount,
+        notes: values.notes || undefined,
+      };
       await updateMutation.mutateAsync(payload);
     } else {
+      const payload = {
+        scheduleId: values.scheduleId,
+        title: values.title,
+        startTime: toISOString(values.date, values.startTime),
+        endTime: toISOString(values.date, values.endTime),
+        location: values.location || undefined,
+        role: values.role || undefined,
+        requiredHeadcount: values.requiredHeadcount,
+        notes: values.notes || undefined,
+        assignIds: Array.from(selectedIds),
+      };
       await createMutation.mutateAsync(payload);
     }
   }
@@ -169,24 +199,26 @@ export function ShiftFormModal({ shift, onClose }: Props) {
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} style={s.form}>
-          {/* Schedule */}
-          <label style={s.label}>
-            Schedule *
-            <select
-              style={{ ...s.input, ...(errors.scheduleId ? s.inputError : {}) }}
-              {...register("scheduleId", { required: "Schedule is required" })}
-            >
-              <option value="">— select —</option>
-              {schedules.map((sc) => (
-                <option key={sc.id} value={sc.id}>
-                  {sc.name}
-                </option>
-              ))}
-            </select>
-            {errors.scheduleId && (
-              <span style={s.fieldError}>{errors.scheduleId.message}</span>
-            )}
-          </label>
+          {/* Schedule (only for create) */}
+          {!isEdit && (
+            <label style={s.label}>
+              Schedule *
+              <select
+                style={{ ...s.input, ...(errors.scheduleId ? s.inputError : {}) }}
+                {...register("scheduleId", { required: "Schedule is required" })}
+              >
+                <option value="">— select —</option>
+                {schedules.map((sc) => (
+                  <option key={sc.id} value={sc.id}>
+                    {sc.name}
+                  </option>
+                ))}
+              </select>
+              {errors.scheduleId && (
+                <span style={s.fieldError}>{errors.scheduleId.message}</span>
+              )}
+            </label>
+          )}
 
           {/* Title */}
           <label style={s.label}>
@@ -220,10 +252,7 @@ export function ShiftFormModal({ shift, onClose }: Props) {
               Start Time *
               <input
                 type="time"
-                style={{
-                  ...s.input,
-                  ...(errors.startTime ? s.inputError : {}),
-                }}
+                style={{ ...s.input, ...(errors.startTime ? s.inputError : {}) }}
                 {...register("startTime", { required: "Required" })}
               />
               {errors.startTime && (
@@ -253,7 +282,7 @@ export function ShiftFormModal({ shift, onClose }: Props) {
             />
           </label>
 
-          {/* Role */}
+          {/* Role + Headcount */}
           <div style={s.row}>
             <label style={{ ...s.label, flex: 1 }}>
               Role
@@ -288,7 +317,12 @@ export function ShiftFormModal({ shift, onClose }: Props) {
 
           {/* Employee picker */}
           <div style={s.section}>
-            <div style={s.sectionTitle}>Assign Employee</div>
+            <div style={s.sectionTitle}>
+              Assign Employees
+              {selectedIds.size > 0 && (
+                <span style={s.badge}>{selectedIds.size} selected</span>
+              )}
+            </div>
             <input
               style={{ ...s.input, marginBottom: 8 }}
               placeholder="Search employees..."
@@ -300,16 +334,13 @@ export function ShiftFormModal({ shift, onClose }: Props) {
                 <div style={s.emptyMsg}>No employees found</div>
               )}
               {filteredEmployees.map((emp) => {
-                const selected = selectedEmployeeIds.includes(emp.id);
+                const selected = selectedIds.has(emp.id);
                 return (
                   <button
                     key={emp.id}
                     type="button"
-                    style={{
-                      ...s.empItem,
-                      ...(selected ? s.empItemSelected : {}),
-                    }}
-                    onClick={() => handleEmployeeToggle(emp.id)}
+                    style={{ ...s.empItem, ...(selected ? s.empItemSelected : {}) }}
+                    onClick={() => void handleEmployeeToggle(emp.id)}
                   >
                     <span style={s.empName}>
                       {emp.firstName} {emp.lastName}
@@ -322,7 +353,6 @@ export function ShiftFormModal({ shift, onClose }: Props) {
                 );
               })}
             </div>
-
             <ConflictWarning conflicts={conflicts} />
           </div>
 
@@ -333,7 +363,11 @@ export function ShiftFormModal({ shift, onClose }: Props) {
               Cancel
             </button>
             <button type="submit" style={s.submitBtn} disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : isEdit ? "Save Changes" : "Create Shift"}
+              {isSubmitting
+                ? "Saving..."
+                : isEdit
+                ? "Save Changes"
+                : "Create Shift"}
             </button>
           </div>
         </form>
@@ -406,16 +440,23 @@ const s: Record<string, React.CSSProperties> = {
   inputError: { borderColor: "#ef4444" },
   fieldError: { color: "#ef4444", fontSize: 12, fontWeight: 400 },
   row: { display: "flex", gap: 12 },
-  section: {
-    border: "1px solid #e5e7eb",
-    borderRadius: 8,
-    padding: 12,
-  },
+  section: { border: "1px solid #e5e7eb", borderRadius: 8, padding: 12 },
   sectionTitle: {
     fontSize: 13,
     fontWeight: 600,
     color: "#374151",
     marginBottom: 8,
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+  },
+  badge: {
+    background: "#eef2ff",
+    color: "#4338ca",
+    borderRadius: 20,
+    padding: "1px 8px",
+    fontSize: 11,
+    fontWeight: 600,
   },
   empList: {
     maxHeight: 180,
