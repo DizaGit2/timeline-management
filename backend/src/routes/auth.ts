@@ -22,7 +22,15 @@ const loginLimiter = rateLimit({
   message: { error: { message: "Too many login attempts, please try again later" } },
 });
 
-router.post("/register", validate(registerSchema), asyncHandler(register));
+const registerLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // max 5 registrations per IP per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: { message: "Too many registration attempts, please try again later" } },
+});
+
+router.post("/register", registerLimiter, validate(registerSchema), asyncHandler(register));
 router.post("/login", loginLimiter, validate(loginSchema), asyncHandler(login));
 router.post("/refresh", validate(refreshSchema), asyncHandler(refresh));
 router.post("/logout", authGuard, asyncHandler(logout));
