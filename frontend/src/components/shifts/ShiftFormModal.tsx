@@ -18,6 +18,7 @@ import { ConflictWarning } from "./ConflictWarning";
 
 interface Props {
   shift?: Shift | null;
+  defaultScheduleId?: string;
   onClose: () => void;
 }
 
@@ -45,7 +46,7 @@ function formatTime(iso: string): string {
   return new Date(iso).toTimeString().slice(0, 5);
 }
 
-export function ShiftFormModal({ shift, onClose }: Props) {
+export function ShiftFormModal({ shift, defaultScheduleId, onClose }: Props) {
   const qc = useQueryClient();
   const isEdit = !!shift;
 
@@ -63,7 +64,7 @@ export function ShiftFormModal({ shift, onClose }: Props) {
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     defaultValues: {
-      scheduleId: shift?.scheduleId ?? "",
+      scheduleId: shift?.scheduleId ?? defaultScheduleId ?? "",
       title: shift?.title ?? "",
       date: shift ? formatDate(shift.startTime) : "",
       startTime: shift ? formatTime(shift.startTime) : "",
