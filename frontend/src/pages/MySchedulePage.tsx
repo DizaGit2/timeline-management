@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchShifts, Shift } from "../api/shifts";
 import { WeeklyCalendarGrid } from "../components/schedule/WeeklyCalendarGrid";
 import { WeekNavigator } from "../components/schedule/WeekNavigator";
-import { Navbar } from "../components/Navbar";
 
 function getWeekStart(date: Date): Date {
   const d = new Date(date);
@@ -37,7 +36,6 @@ export function MySchedulePage() {
 
   return (
     <div style={s.pageWrapper}>
-      <Navbar />
       <div style={s.page}>
       {/* Header */}
       <div style={s.header}>

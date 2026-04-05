@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import { PrivateRoute } from './components/PrivateRoute'
 import { PublicOnlyRoute } from './components/PublicOnlyRoute'
+import { AppShell } from './components/AppShell'
 import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
@@ -30,30 +31,38 @@ export function App() {
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-          {/* Protected routes — all authenticated roles */}
+          {/* Protected routes — wrapped in AppShell for persistent header/nav */}
           <Route element={<PrivateRoute />}>
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/my-schedule" element={<MySchedulePage />} />
-            <Route path="/availability/:employeeId" element={<AvailabilityPage />} />
+            <Route element={<AppShell />}>
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/my-schedule" element={<MySchedulePage />} />
+              <Route path="/availability/:employeeId" element={<AvailabilityPage />} />
+            </Route>
           </Route>
 
           {/* Shift management — Admin + Manager */}
           <Route element={<PrivateRoute roles={['ADMIN', 'MANAGER']} />}>
-            <Route path="/shifts" element={<ShiftsPage />} />
-            <Route path="/schedule" element={<SchedulePage />} />
-            <Route path="/schedules" element={<SchedulesPage />} />
-            <Route path="/employees" element={<EmployeesPage />} />
-            <Route path="/reports" element={<ReportsPage />} />
+            <Route element={<AppShell />}>
+              <Route path="/shifts" element={<ShiftsPage />} />
+              <Route path="/schedule" element={<SchedulePage />} />
+              <Route path="/schedules" element={<SchedulesPage />} />
+              <Route path="/employees" element={<EmployeesPage />} />
+              <Route path="/reports" element={<ReportsPage />} />
+            </Route>
           </Route>
 
           {/* Admin-only routes */}
           <Route element={<PrivateRoute roles={['ADMIN']} />}>
-            <Route path="/admin/*" element={<AdminPlaceholder />} />
+            <Route element={<AppShell />}>
+              <Route path="/admin/*" element={<AdminPlaceholder />} />
+            </Route>
           </Route>
 
           {/* Admin + Manager routes */}
           <Route element={<PrivateRoute roles={['ADMIN', 'MANAGER']} />}>
-            <Route path="/manager/*" element={<ManagerPlaceholder />} />
+            <Route element={<AppShell />}>
+              <Route path="/manager/*" element={<ManagerPlaceholder />} />
+            </Route>
           </Route>
 
           {/* Root redirect */}

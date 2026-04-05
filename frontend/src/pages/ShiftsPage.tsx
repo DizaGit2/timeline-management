@@ -9,7 +9,6 @@ import {
   ShiftFilters,
 } from "../api/shifts";
 import { ShiftFormModal } from "../components/shifts/ShiftFormModal";
-import { Navbar } from "../components/Navbar";
 
 function formatDateTime(iso: string) {
   const d = new Date(iso);
@@ -72,7 +71,6 @@ export function ShiftsPage() {
 
   return (
     <div style={s.pageWrapper}>
-      <Navbar />
       <div style={s.page}>
       {/* Header */}
       <div style={s.header}>

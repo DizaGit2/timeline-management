@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Navbar } from '../components/Navbar'
 import { fetchDashboardStats, type DashboardStats } from '../api/dashboard'
 
 export function DashboardPage() {
@@ -32,8 +31,6 @@ export function DashboardPage() {
 
   return (
     <div style={s.page}>
-      <Navbar />
-
       <main style={s.main}>
         <h1 style={s.heading}>
           Welcome back{user?.name ? `, ${user.name}` : ''}!

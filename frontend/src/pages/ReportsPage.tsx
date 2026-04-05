@@ -7,7 +7,6 @@ import {
   HoursRow,
   UnfilledShift,
 } from "../api/reports";
-import { Navbar } from "../components/Navbar";
 
 type Tab = "hours" | "unfilled";
 
@@ -59,7 +58,6 @@ export function ReportsPage() {
 
   return (
     <div style={s.pageWrapper}>
-      <Navbar />
       <div style={s.page}>
       {/* Header */}
       <div style={s.header}>
