@@ -84,6 +84,7 @@ model Employee {
   unavailabilityExceptions  UnavailabilityException[]
   teamMemberships           TeamMember[]
 
+  @@unique([organizationId, email])
   @@index([organizationId])
   @@map("employees")
 }

@@ -21,9 +21,14 @@ export function DashboardPage() {
         </div>
         <nav style={s.nav}>
           {isManagerOrAdmin && (
-            <Link to="/shifts" style={s.navLink}>
-              Shifts
-            </Link>
+            <>
+              <Link to="/schedules" style={s.navLink}>
+                Schedules
+              </Link>
+              <Link to="/shifts" style={s.navLink}>
+                Shifts
+              </Link>
+            </>
           )}
         </nav>
         <div style={s.headerRight}>
@@ -62,6 +67,10 @@ export function DashboardPage() {
           <div style={s.quickLinks}>
             <h2 style={s.sectionTitle}>Quick Actions</h2>
             <div style={s.quickLinkGrid}>
+              <Link to="/schedules" style={s.quickLink}>
+                <span style={s.quickLinkIcon}>📅</span>
+                <span>Manage Schedules</span>
+              </Link>
               <Link to="/shifts" style={s.quickLink}>
                 <span style={s.quickLinkIcon}>📋</span>
                 <span>Manage Shifts</span>
