@@ -16,7 +16,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor, within, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw";
@@ -50,6 +50,12 @@ const mockSchedules: Schedule[] = [
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** Finds the delete confirmation modal via its heading. */
+function getConfirmModal() {
+  const heading = screen.getByRole("heading", { name: /delete schedule/i });
+  return heading.parentElement!;
+}
 
 function renderPage() {
   const qc = new QueryClient({
@@ -86,7 +92,8 @@ describe("SchedulesPage — empty state", () => {
     renderPage();
 
     await waitFor(() => {
-      expect(screen.getByText(/schedules/i)).toBeInTheDocument();
+      // Use heading role to avoid matching the subtitle text
+      expect(screen.getByRole("heading", { name: /^schedules$/i })).toBeInTheDocument();
     });
   });
 
@@ -94,9 +101,9 @@ describe("SchedulesPage — empty state", () => {
     renderPage();
 
     await waitFor(() => {
-      expect(
-        screen.getByRole("button", { name: /new schedule|create schedule|\+/i })
-      ).toBeInTheDocument();
+      // Empty state renders two "+ New Schedule" buttons (header + empty state)
+      const buttons = screen.getAllByRole("button", { name: /new schedule|\+/i });
+      expect(buttons.length).toBeGreaterThanOrEqual(1);
     });
   });
 });
@@ -180,22 +187,20 @@ describe("SchedulesPage — create modal", () => {
     const user = userEvent.setup();
     renderPage();
 
-    await waitFor(() =>
-      screen.getByRole("button", { name: /new schedule|\+/i })
-    );
+    // With schedules loaded, only the header button shows (no empty-state button)
+    await waitFor(() => screen.getByRole("button", { name: /new schedule|\+/i }));
     await user.click(screen.getByRole("button", { name: /new schedule|\+/i }));
 
-    expect(screen.getByText(/new schedule/i)).toBeInTheDocument();
+    // The form input confirms the modal is open — avoids matching the button text
     expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /new schedule/i })).toBeInTheDocument();
   });
 
   it("closes the modal when Cancel is clicked", async () => {
     const user = userEvent.setup();
     renderPage();
 
-    await waitFor(() =>
-      screen.getByRole("button", { name: /new schedule|\+/i })
-    );
+    await waitFor(() => screen.getByRole("button", { name: /new schedule|\+/i }));
     await user.click(screen.getByRole("button", { name: /new schedule|\+/i }));
     await user.click(screen.getByRole("button", { name: /cancel/i }));
 
@@ -217,20 +222,27 @@ describe("SchedulesPage — form validation", () => {
   async function openCreateModal() {
     const user = userEvent.setup();
     renderPage();
-    await waitFor(() =>
-      screen.getByRole("button", { name: /new schedule|\+/i })
-    );
-    await user.click(screen.getByRole("button", { name: /new schedule|\+/i }));
+    // Wait for empty state to confirm data has loaded before interacting
+    await waitFor(() => screen.getByText(/no schedules/i));
+    // Empty list shows 2 "+ New Schedule" buttons (header + empty-state)
+    const [firstBtn] = screen.getAllByRole("button", { name: /new schedule|\+/i });
+    await user.click(firstBtn);
+    // Wait for the form to be visible
+    await waitFor(() => screen.getByLabelText(/name/i));
     return user;
   }
 
   it("shows an error when submitting with empty name", async () => {
-    const user = await openCreateModal();
+    await openCreateModal();
 
-    await user.click(screen.getByRole("button", { name: /create schedule|save/i }));
+    // fireEvent.submit bypasses native HTML5 required-field validation so the
+    // component's own setFormError("Schedule name is required.") can be tested.
+    const form = screen.getByRole("button", { name: /create schedule/i }).closest("form");
+    fireEvent.submit(form!);
 
     await waitFor(() => {
-      expect(screen.getByText(/name is required|required/i)).toBeInTheDocument();
+      // Component sets: "Schedule name is required."
+      expect(screen.getByText(/schedule name is required/i)).toBeInTheDocument();
     });
   });
 
@@ -238,11 +250,15 @@ describe("SchedulesPage — form validation", () => {
     const user = await openCreateModal();
 
     await user.type(screen.getByLabelText(/name/i), "Test Schedule");
-    await user.click(screen.getByRole("button", { name: /create schedule|save/i }));
+
+    // fireEvent.submit bypasses native required validation; dates are still empty
+    const form = screen.getByRole("button", { name: /create schedule/i }).closest("form");
+    fireEvent.submit(form!);
 
     await waitFor(() => {
+      // Component sets: "Start date and end date are required."
       expect(
-        screen.getByText(/start date.*required|date.*required/i)
+        screen.getByText(/start date and end date are required/i)
       ).toBeInTheDocument();
     });
   });
@@ -301,10 +317,9 @@ describe("SchedulesPage — create schedule", () => {
     const user = userEvent.setup();
     renderPage();
 
-    await waitFor(() =>
-      screen.getByRole("button", { name: /new schedule|\+/i })
-    );
-    await user.click(screen.getByRole("button", { name: /new schedule|\+/i }));
+    await waitFor(() => screen.getAllByRole("button", { name: /new schedule|\+/i }));
+    const [firstBtn] = screen.getAllByRole("button", { name: /new schedule|\+/i });
+    await user.click(firstBtn);
 
     await user.type(screen.getByLabelText(/name/i), "New Test Schedule");
     await user.type(screen.getByLabelText(/start date/i), "2026-06-01");
@@ -328,10 +343,9 @@ describe("SchedulesPage — create schedule", () => {
     const user = userEvent.setup();
     renderPage();
 
-    await waitFor(() =>
-      screen.getByRole("button", { name: /new schedule|\+/i })
-    );
-    await user.click(screen.getByRole("button", { name: /new schedule|\+/i }));
+    await waitFor(() => screen.getAllByRole("button", { name: /new schedule|\+/i }));
+    const [firstBtn2] = screen.getAllByRole("button", { name: /new schedule|\+/i });
+    await user.click(firstBtn2);
 
     await user.type(screen.getByLabelText(/name/i), "Error Schedule");
     await user.type(screen.getByLabelText(/start date/i), "2026-06-01");
@@ -441,7 +455,9 @@ describe("SchedulesPage — delete schedule", () => {
     await user.click(deleteButtons[0]);
 
     await waitFor(() => {
-      expect(screen.getByText(/May Week 1/)).toBeInTheDocument();
+      // Check that the name appears inside the confirmation modal specifically
+      const confirmModal = getConfirmModal();
+      expect(within(confirmModal).getByText(/May Week 1/)).toBeInTheDocument();
     });
   });
 
@@ -484,12 +500,11 @@ describe("SchedulesPage — delete schedule", () => {
     const deleteButtons = screen.getAllByRole("button", { name: /delete/i });
     await user.click(deleteButtons[0]);
 
-    await waitFor(() => screen.getByText(/delete schedule/i));
-    const confirmButtons = screen.getAllByRole("button", { name: /^delete$/i });
-    const confirmDeleteBtn = confirmButtons.find(
-      (btn) => btn.textContent?.match(/^delete$/i)
-    );
-    await user.click(confirmDeleteBtn!);
+    await waitFor(() => getConfirmModal());
+    const confirmDeleteBtn = within(getConfirmModal()).getByRole("button", {
+      name: /^delete$/i,
+    });
+    await user.click(confirmDeleteBtn);
 
     await waitFor(() => {
       expect(deleteCalledId).toBe("sched-1");
@@ -510,15 +525,15 @@ describe("SchedulesPage — delete schedule", () => {
     const deleteButtons = screen.getAllByRole("button", { name: /delete/i });
     await user.click(deleteButtons[0]);
 
-    await waitFor(() => screen.getByText(/delete schedule/i));
-    const confirmButtons = screen.getAllByRole("button", { name: /^delete$/i });
-    const confirmDeleteBtn = confirmButtons.find(
-      (btn) => btn.textContent?.match(/^delete$/i)
-    );
-    await user.click(confirmDeleteBtn!);
+    await waitFor(() => getConfirmModal());
+    const confirmDeleteBtn = within(getConfirmModal()).getByRole("button", {
+      name: /^delete$/i,
+    });
+    await user.click(confirmDeleteBtn);
 
     await waitFor(() => {
-      expect(screen.getByText(/failed to delete/i)).toBeInTheDocument();
+      const confirmModal = getConfirmModal();
+      expect(within(confirmModal).getByText(/failed to delete/i)).toBeInTheDocument();
     });
   });
 });
