@@ -21,6 +21,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw";
 import { SchedulesPage } from "../SchedulesPage";
+import { ToastProvider } from "../../contexts/ToastContext";
 import { server } from "../../test/msw-server";
 import type { Schedule } from "../../api/schedules";
 
@@ -68,7 +69,9 @@ function renderPage() {
   });
   return render(
     <QueryClientProvider client={qc}>
-      <SchedulesPage />
+      <ToastProvider>
+        <SchedulesPage />
+      </ToastProvider>
     </QueryClientProvider>
   );
 }

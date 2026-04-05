@@ -10,6 +10,7 @@ import {
 } from "../api/shifts";
 import { ShiftFormModal } from "../components/shifts/ShiftFormModal";
 import { Navbar } from "../components/Navbar";
+import { useToast } from "../contexts/ToastContext";
 
 function formatDateTime(iso: string) {
   const d = new Date(iso);
@@ -26,6 +27,7 @@ function formatDate(iso: string) {
 
 export function ShiftsPage() {
   const qc = useQueryClient();
+  const { addToast } = useToast();
 
   const [filters, setFilters] = useState<ShiftFilters>({});
   const [modalOpen, setModalOpen] = useState(false);
@@ -51,7 +53,11 @@ export function ShiftsPage() {
     mutationFn: (id: string) => deleteShift(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["shifts"] });
+      addToast("Shift deleted.", "success");
       setDeleteTarget(null);
+    },
+    onError: () => {
+      addToast("Failed to delete shift.", "error");
     },
   });
 
