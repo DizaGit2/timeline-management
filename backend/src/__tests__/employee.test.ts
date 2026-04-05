@@ -143,7 +143,7 @@ describe("GET /api/employees", () => {
     expect(res.body[0].id).toBe("emp-1");
     // Verify the query is scoped to the caller's org
     expect(mockPrisma.employee.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { organizationId: "org-1" } })
+      expect.objectContaining({ where: expect.objectContaining({ organizationId: "org-1" }) })
     );
   });
 
@@ -167,21 +167,16 @@ describe("GET /api/employees", () => {
 
     expect(res.status).toBe(200);
     expect(mockPrisma.employee.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { organizationId: "org-2" } })
+      expect.objectContaining({ where: expect.objectContaining({ organizationId: "org-2" }) })
     );
   });
 
-  // RBAC gap: employee role should not be able to list employees per TIM-32 spec.
-  // Currently the route has no role restriction — this test documents current (incorrect) behaviour.
-  it("EMPLOYEE role can currently access the list endpoint (known RBAC gap)", async () => {
-    mockPrisma.employee.findMany.mockResolvedValue([baseEmployee]);
-
+  it("EMPLOYEE role cannot access the list endpoint (RBAC enforced)", async () => {
     const res = await request(app)
       .get("/api/employees")
       .set("Authorization", `Bearer ${employeeToken}`);
 
-    // When the RBAC restriction is added this should become 403.
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(403);
   });
 });
 
@@ -430,14 +425,17 @@ describe("DELETE /api/employees/:id", () => {
 
   it("deletes an existing employee and returns 204", async () => {
     mockPrisma.employee.findFirst.mockResolvedValue(baseEmployee);
-    mockPrisma.employee.delete.mockResolvedValue(baseEmployee);
+    mockPrisma.employee.update.mockResolvedValue({ ...baseEmployee, isActive: false });
 
     const res = await request(app)
       .delete("/api/employees/emp-1")
       .set("Authorization", `Bearer ${adminToken}`);
 
     expect(res.status).toBe(204);
-    expect(mockPrisma.employee.delete).toHaveBeenCalledWith({ where: { id: "emp-1" } });
+    expect(mockPrisma.employee.update).toHaveBeenCalledWith({
+      where: { id: "emp-1" },
+      data: { isActive: false },
+    });
   });
 
   it("returns 404 when employee does not exist", async () => {

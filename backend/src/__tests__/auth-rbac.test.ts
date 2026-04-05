@@ -282,24 +282,31 @@ describe("TC-AUTH-05: Forgot / Reset password", () => {
 // ── TC-AUTH-06: Registration edge cases ──────────────────────────────────────
 
 describe("TC-AUTH-06: Registration edge cases", () => {
+  const tc06Ip = nextIp();
+
   it("returns 409 when registering with an existing email", async () => {
+    const ip = nextIp();
     const email = `dup-${Date.now()}@test.com`;
     // First registration
-    const first = await request(app).post("/api/auth/register").send({
-      email,
-      password: "Test1234!",
-      name: "First",
-      organizationName: `Dup Org ${Date.now()}`,
-    });
+    const first = await request(app).post("/api/auth/register")
+      .set("X-Forwarded-For", ip)
+      .send({
+        email,
+        password: "Test1234!",
+        name: "First",
+        organizationName: `Dup Org ${Date.now()}`,
+      });
     expect(first.status).toBe(201);
 
     // Duplicate
-    const dup = await request(app).post("/api/auth/register").send({
-      email,
-      password: "AnotherPwd1!",
-      name: "Second",
-      organizationName: `Dup Org 2 ${Date.now()}`,
-    });
+    const dup = await request(app).post("/api/auth/register")
+      .set("X-Forwarded-For", ip)
+      .send({
+        email,
+        password: "AnotherPwd1!",
+        name: "Second",
+        organizationName: `Dup Org 2 ${Date.now()}`,
+      });
     expect(dup.status).toBe(409);
 
     // Cleanup
@@ -311,19 +318,23 @@ describe("TC-AUTH-06: Registration edge cases", () => {
   });
 
   it("returns 400 for missing required fields", async () => {
-    const res = await request(app).post("/api/auth/register").send({
-      email: "nopass@test.com",
-    });
+    const res = await request(app).post("/api/auth/register")
+      .set("X-Forwarded-For", tc06Ip)
+      .send({
+        email: "nopass@test.com",
+      });
     expect(res.status).toBe(400);
   });
 
   it("returns 400 for password that is too short", async () => {
-    const res = await request(app).post("/api/auth/register").send({
-      email: `short-${Date.now()}@test.com`,
-      password: "abc",
-      name: "Short",
-      organizationName: "Short Org",
-    });
+    const res = await request(app).post("/api/auth/register")
+      .set("X-Forwarded-For", tc06Ip)
+      .send({
+        email: `short-${Date.now()}@test.com`,
+        password: "abc",
+        name: "Short",
+        organizationName: "Short Org",
+      });
     expect(res.status).toBe(400);
   });
 });

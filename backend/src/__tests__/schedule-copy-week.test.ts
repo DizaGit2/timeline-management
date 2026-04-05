@@ -141,7 +141,7 @@ describe("POST /api/schedules/copy-week", () => {
       .send({ sourceWeekStart: "2026-04-06", targetWeekStart: "2026-04-06" });
 
     expect(res.status).toBe(400);
-    expect(res.body).toMatchObject({ error: expect.stringMatching(/same week|cannot copy/i) });
+    expect(res.body).toMatchObject({ error: { message: expect.stringMatching(/same week|cannot copy/i) } });
   });
 
   it("creates copies of all source week shifts in the target week", async () => {
@@ -198,7 +198,7 @@ describe("POST /api/schedules/copy-week", () => {
 
     expect(res.status).toBe(409);
     expect(res.body).toMatchObject({
-      error: expect.stringMatching(/already has shifts|conflict/i),
+      error: { message: expect.stringMatching(/already has shifts|conflict/i) },
     });
   });
 
@@ -210,7 +210,7 @@ describe("POST /api/schedules/copy-week", () => {
 
     expect(res.status).toBe(404);
     expect(res.body).toMatchObject({
-      error: expect.stringMatching(/no shifts|source.*empty/i),
+      error: { message: expect.stringMatching(/no shifts|source.*empty/i) },
     });
   });
 

@@ -30,6 +30,7 @@ import jwt from "jsonwebtoken";
 import { config } from "../config";
 import { errorHandler } from "../middleware/errorHandler";
 import employeeRoutes from "../routes/employee";
+import { employeeAvailabilityRouter } from "../routes/availability";
 
 // ---------------------------------------------------------------------------
 // Prisma mock
@@ -80,6 +81,7 @@ function createApp() {
   const app = express();
   app.use(express.json());
   app.use("/api/employees", employeeRoutes);
+  app.use("/api/employees/:id", employeeAvailabilityRouter);
   app.use(errorHandler);
   return app;
 }
