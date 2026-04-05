@@ -24,6 +24,8 @@ import { SchedulesPage } from "../SchedulesPage";
 import { server } from "../../test/msw-server";
 import type { Schedule } from "../../api/schedules";
 
+vi.mock("../../components/Navbar", () => ({ Navbar: () => null }));
+
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
 const mockSchedules: Schedule[] = [

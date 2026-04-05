@@ -5,6 +5,7 @@ import { WeeklyCalendarGrid, ShiftMoveEvent } from "../components/schedule/Weekl
 import { WeekNavigator } from "../components/schedule/WeekNavigator";
 import { ShiftFilter, FilterState } from "../components/schedule/ShiftFilter";
 import { CopyWeekModal } from "../components/schedule/CopyWeekModal";
+import { Navbar } from "../components/Navbar";
 
 function getWeekStart(date: Date): Date {
   const d = new Date(date);
@@ -43,7 +44,9 @@ export function SchedulePage() {
   }
 
   return (
-    <div style={s.page}>
+    <div style={s.pageWrapper}>
+      <Navbar />
+      <div style={s.page}>
       <div style={s.header}>
         <div>
           <h1 style={s.pageTitle}>Schedule</h1>
@@ -93,11 +96,13 @@ export function SchedulePage() {
         onClose={() => setCopyModalOpen(false)}
         onSuccess={() => setCopyModalOpen(false)}
       />
+      </div>
     </div>
   );
 }
 
 const s: Record<string, React.CSSProperties> = {
+  pageWrapper: { minHeight: "100vh", background: "#f8fafc" },
   page: {
     maxWidth: 1200,
     margin: "0 auto",
