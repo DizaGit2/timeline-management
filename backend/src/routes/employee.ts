@@ -1,4 +1,5 @@
 import { Router } from "express";
+import rateLimit from "express-rate-limit";
 import { listEmployees, listInactiveEmployees, getEmployee, createEmployee, updateEmployee, deleteEmployee, reactivateEmployee } from "../controllers/employee";
 import { validate } from "../middleware/validate";
 import { authGuard, requireRole } from "../middleware/authGuard";
@@ -8,6 +9,7 @@ import { asyncHandler } from "../lib/asyncHandler";
 const router = Router();
 
 router.use(authGuard);
+router.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }));
 
 // Read endpoints — Manager and Admin only (EMPLOYEE role cannot access employee management)
 router.get("/", requireRole("ADMIN", "MANAGER"), asyncHandler(listEmployees));

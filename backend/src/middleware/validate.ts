@@ -3,7 +3,7 @@ import { ZodSchema } from "zod";
 
 export function validate(schema: ZodSchema) {
   return (req: Request, _res: Response, next: NextFunction): void => {
-    schema.parse(req.body);
+    req.body = schema.parse(req.body);
     next();
   };
 }

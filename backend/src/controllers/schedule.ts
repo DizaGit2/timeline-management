@@ -21,7 +21,22 @@ export async function getSchedule(req: Request, res: Response): Promise<void> {
 
   const schedule = await prisma.schedule.findFirst({
     where: { id, organizationId },
-    include: { team: true, shifts: { include: { employee: true } } },
+    include: {
+      team: true,
+      shifts: {
+        include: {
+          employee: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              position: true,
+              isActive: true,
+            },
+          },
+        },
+      },
+    },
   });
 
   if (!schedule) {
