@@ -1,11 +1,34 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Navbar } from '../components/Navbar'
+import { fetchDashboardStats, type DashboardStats } from '../api/dashboard'
 
 export function DashboardPage() {
   const { user } = useAuth()
 
   const isManagerOrAdmin = user?.role === 'ADMIN' || user?.role === 'MANAGER'
+
+  const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [statsLoading, setStatsLoading] = useState(false)
+
+  useEffect(() => {
+    if (!isManagerOrAdmin) return
+    setStatsLoading(true)
+    fetchDashboardStats()
+      .then((data) => {
+        setStats(data)
+      })
+      .catch(() => {
+        setStats(null)
+      })
+      .finally(() => {
+        setStatsLoading(false)
+      })
+  }, [isManagerOrAdmin])
+
+  const displayValue = (n: number | undefined) =>
+    statsLoading || n === undefined ? '—' : String(n)
 
   return (
     <div style={s.page}>
@@ -21,9 +44,21 @@ export function DashboardPage() {
         </p>
 
         <div style={s.grid}>
-          <StatCard label="Schedules" value="—" color="#6366f1" />
-          <StatCard label="Employees" value="—" color="#0ea5e9" />
-          <StatCard label="Shifts this week" value="—" color="#10b981" />
+          <StatCard
+            label="Schedules"
+            value={isManagerOrAdmin ? displayValue(stats?.scheduleCount) : '—'}
+            color="#6366f1"
+          />
+          <StatCard
+            label="Employees"
+            value={isManagerOrAdmin ? displayValue(stats?.employeeCount) : '—'}
+            color="#0ea5e9"
+          />
+          <StatCard
+            label="Shifts this week"
+            value={isManagerOrAdmin ? displayValue(stats?.shiftsThisWeek) : '—'}
+            color="#10b981"
+          />
         </div>
 
         {isManagerOrAdmin && (
@@ -46,11 +81,28 @@ export function DashboardPage() {
           </div>
         )}
 
-        <div style={s.placeholder}>
-          <p style={s.placeholderText}>
-            Dashboard content will be built in subsequent sprints.
-          </p>
-        </div>
+        {isManagerOrAdmin && (
+          statsLoading || stats === null ? (
+            <div style={s.placeholder}>
+              <p style={s.placeholderText}>
+                Dashboard content will be built in subsequent sprints.
+              </p>
+            </div>
+          ) : stats.unfilledShiftsThisWeek > 0 ? (
+            <div style={s.calloutAmber}>
+              <span style={s.calloutIcon}>⚠</span>
+              <span style={s.calloutText}>
+                {stats.unfilledShiftsThisWeek} shift{stats.unfilledShiftsThisWeek !== 1 ? 's' : ''} need staffing this week
+              </span>
+              <Link to="/shifts" style={s.calloutLink}>Manage Shifts</Link>
+            </div>
+          ) : (
+            <div style={s.calloutGreen}>
+              <span style={s.calloutIcon}>✓</span>
+              <span style={s.calloutText}>All shifts this week are fully staffed.</span>
+            </div>
+          )
+        )}
       </main>
     </div>
   )
@@ -113,4 +165,30 @@ const s: Record<string, React.CSSProperties> = {
     textAlign: 'center',
   },
   placeholderText: { margin: 0, color: '#94a3b8', fontSize: 14 },
+  calloutAmber: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    background: '#fffbeb',
+    border: '1px solid #fcd34d',
+    borderRadius: 12,
+    padding: '1rem 1.5rem',
+  },
+  calloutGreen: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    background: '#f0fdf4',
+    border: '1px solid #86efac',
+    borderRadius: 12,
+    padding: '1rem 1.5rem',
+  },
+  calloutIcon: { fontSize: 18 },
+  calloutText: { flex: 1, fontSize: 14, fontWeight: 500, color: '#1e293b' },
+  calloutLink: {
+    fontSize: 13,
+    fontWeight: 600,
+    color: '#0ea5e9',
+    textDecoration: 'none',
+  },
 }
