@@ -1,55 +1,15 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-
-const ROLE_BADGE: Record<string, string> = {
-  ADMIN: '#6366f1',
-  MANAGER: '#0ea5e9',
-  VIEWER: '#64748b',
-}
+import { Navbar } from '../components/Navbar'
 
 export function DashboardPage() {
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
 
   const isManagerOrAdmin = user?.role === 'ADMIN' || user?.role === 'MANAGER'
 
   return (
     <div style={s.page}>
-      <header style={s.header}>
-        <div style={s.brand}>
-          <span style={s.logo}>⏱</span>
-          <span style={s.brandName}>Timeline Management</span>
-        </div>
-        <nav style={s.nav}>
-          {isManagerOrAdmin && (
-            <>
-              <Link to="/schedules" style={s.navLink}>
-                Schedules
-              </Link>
-              <Link to="/shifts" style={s.navLink}>
-                Shifts
-              </Link>
-              <Link to="/employees" style={s.navLink}>
-                Employees
-              </Link>
-            </>
-          )}
-        </nav>
-        <div style={s.headerRight}>
-          {user && (
-            <span
-              style={{
-                ...s.roleBadge,
-                background: ROLE_BADGE[user.role] ?? '#64748b',
-              }}
-            >
-              {user.role}
-            </span>
-          )}
-          <button onClick={() => void logout()} style={s.logoutBtn}>
-            Sign out
-          </button>
-        </div>
-      </header>
+      <Navbar />
 
       <main style={s.main}>
         <h1 style={s.heading}>
@@ -115,47 +75,6 @@ function StatCard({
 
 const s: Record<string, React.CSSProperties> = {
   page: { minHeight: '100vh', background: '#f8fafc' },
-  header: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '0 2rem',
-    height: 60,
-    background: '#fff',
-    borderBottom: '1px solid #e2e8f0',
-  },
-  brand: { display: 'flex', alignItems: 'center', gap: 8 },
-  logo: { fontSize: 22 },
-  brandName: { fontSize: 16, fontWeight: 700, color: '#1e293b' },
-  nav: { display: 'flex', gap: 4, alignItems: 'center' },
-  navLink: {
-    padding: '5px 12px',
-    borderRadius: 6,
-    fontSize: 14,
-    fontWeight: 500,
-    color: '#475569',
-    textDecoration: 'none',
-    background: 'transparent',
-  },
-  headerRight: { display: 'flex', alignItems: 'center', gap: 12 },
-  roleBadge: {
-    padding: '2px 10px',
-    borderRadius: 20,
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: 700,
-    letterSpacing: '0.5px',
-  },
-  logoutBtn: {
-    padding: '6px 14px',
-    border: '1.5px solid #e2e8f0',
-    borderRadius: 8,
-    background: '#fff',
-    fontSize: 13,
-    fontWeight: 600,
-    color: '#475569',
-    cursor: 'pointer',
-  },
   main: { padding: '2rem', maxWidth: 960, margin: '0 auto' },
   heading: { margin: '0 0 0.5rem', fontSize: 26, fontWeight: 700, color: '#1e293b' },
   sub: { margin: '0 0 2rem', fontSize: 14, color: '#64748b' },
