@@ -9,6 +9,7 @@ import {
   CreateSchedulePayload,
 } from "../api/schedules";
 import { Navbar } from "../components/Navbar";
+import { useToast } from "../contexts/ToastContext";
 
 interface FormState {
   name: string;
@@ -34,6 +35,7 @@ function formatDate(iso: string) {
 
 export function SchedulesPage() {
   const qc = useQueryClient();
+  const { addToast } = useToast();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
@@ -50,9 +52,13 @@ export function SchedulesPage() {
     mutationFn: (payload: CreateSchedulePayload) => createSchedule(payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["schedules"] });
+      addToast("Schedule created successfully.", "success");
       closeModal();
     },
-    onError: () => setFormError("Failed to save schedule. Please try again."),
+    onError: () => {
+      setFormError("Failed to save schedule. Please try again.");
+      addToast("Failed to create schedule.", "error");
+    },
   });
 
   const updateMutation = useMutation({
@@ -60,16 +66,24 @@ export function SchedulesPage() {
       updateSchedule(id, payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["schedules"] });
+      addToast("Schedule updated successfully.", "success");
       closeModal();
     },
-    onError: () => setFormError("Failed to save schedule. Please try again."),
+    onError: () => {
+      setFormError("Failed to save schedule. Please try again.");
+      addToast("Failed to update schedule.", "error");
+    },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteSchedule(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["schedules"] });
+      addToast("Schedule deleted.", "success");
       setDeleteTarget(null);
+    },
+    onError: () => {
+      addToast("Failed to delete schedule.", "error");
     },
   });
 

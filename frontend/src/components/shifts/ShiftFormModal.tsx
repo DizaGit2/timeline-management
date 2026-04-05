@@ -15,6 +15,7 @@ import {
   UpdateShiftPayload,
 } from "../../api/shifts";
 import { ConflictWarning } from "./ConflictWarning";
+import { useToast } from "../../contexts/ToastContext";
 
 interface Props {
   shift?: Shift | null;
@@ -47,6 +48,7 @@ function formatTime(iso: string): string {
 
 export function ShiftFormModal({ shift, onClose }: Props) {
   const qc = useQueryClient();
+  const { addToast } = useToast();
   const isEdit = !!shift;
 
   // For new shifts, track which employee IDs to assign after creation
@@ -96,7 +98,11 @@ export function ShiftFormModal({ shift, onClose }: Props) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["shifts"] });
+      addToast("Shift created successfully.", "success");
       onClose();
+    },
+    onError: () => {
+      addToast("Failed to create shift.", "error");
     },
   });
 
@@ -106,7 +112,11 @@ export function ShiftFormModal({ shift, onClose }: Props) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["shifts"] });
+      addToast("Shift updated successfully.", "success");
       onClose();
+    },
+    onError: () => {
+      addToast("Failed to update shift.", "error");
     },
   });
 

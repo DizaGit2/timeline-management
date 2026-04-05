@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
+import { ToastProvider } from './contexts/ToastContext'
 import { PrivateRoute } from './components/PrivateRoute'
 import { PublicOnlyRoute } from './components/PublicOnlyRoute'
 import { LoginPage } from './pages/LoginPage'
@@ -19,6 +20,7 @@ export function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <ToastProvider>
         <Routes>
           {/* Public-only routes — redirect authenticated users to /dashboard */}
           <Route element={<PublicOnlyRoute />}>
@@ -62,6 +64,7 @@ export function App() {
           {/* 404 */}
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
+        </ToastProvider>
       </AuthProvider>
     </BrowserRouter>
   )
