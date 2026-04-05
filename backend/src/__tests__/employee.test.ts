@@ -1,18 +1,17 @@
 /**
- * TIM-73 — QA: Employee management test suite
- * Backend API tests: /api/employees CRUD + org isolation
+ * TIM-113 — QA Tester 1: Employee management test suite
+ * Backend API tests: /api/employees CRUD + org isolation + soft delete/reactivate + search/filter
  *
- * Test scope mirrors TIM-32 acceptance criteria:
- *  - CRUD: create, read, update, delete
+ * Test scope:
+ *  - CRUD: create, read, update, soft-delete
  *  - Org isolation: users see only their own organisation's employees
  *  - Auth: all routes require a valid JWT
- *  - Validation: required fields enforced
- *
- * NOTE — Known gaps (filed as bugs against TIM-32):
- *  - Employee deactivate/reactivate not implemented (no isActive field on Employee model)
- *  - Search/filter by name, email, or status not implemented in GET /api/employees
- *  - RBAC: EMPLOYEE role can currently access all employee management endpoints
- *    (routes only use authGuard, no requireRole restriction)
+ *  - Validation: required fields enforced, email format, hourlyRate positive
+ *  - RBAC: EMPLOYEE role blocked from all employee management endpoints;
+ *          reactivate is ADMIN-only
+ *  - Soft delete / reactivate: DELETE sets isActive=false; POST /:id/reactivate re-enables
+ *  - GET /inactive: returns only inactive employees
+ *  - Search/filter: ?search=, ?status=active|inactive query params
  */
 
 import express from "express";
@@ -456,5 +455,227 @@ describe("DELETE /api/employees/:id", () => {
       .set("Authorization", `Bearer ${otherOrgToken}`);
 
     expect(res.status).toBe(404);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/employees/inactive
+// ---------------------------------------------------------------------------
+describe("GET /api/employees/inactive", () => {
+  const app = createApp();
+
+  const inactiveEmployee = { ...baseEmployee, id: "emp-inactive", isActive: false };
+
+  it("returns inactive employees for the authenticated org", async () => {
+    mockPrisma.employee.findMany.mockResolvedValue([inactiveEmployee]);
+
+    const res = await request(app)
+      .get("/api/employees/inactive")
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(1);
+    expect(mockPrisma.employee.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { organizationId: "org-1", isActive: false },
+      })
+    );
+  });
+
+  it("returns empty list when all employees are active", async () => {
+    mockPrisma.employee.findMany.mockResolvedValue([]);
+
+    const res = await request(app)
+      .get("/api/employees/inactive")
+      .set("Authorization", `Bearer ${managerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([]);
+  });
+
+  it("EMPLOYEE role cannot access inactive list (RBAC enforced)", async () => {
+    const res = await request(app)
+      .get("/api/employees/inactive")
+      .set("Authorization", `Bearer ${employeeToken}`);
+
+    expect(res.status).toBe(403);
+  });
+
+  it("rejects unauthenticated request", async () => {
+    const res = await request(app).get("/api/employees/inactive");
+    expect(res.status).toBe(401);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/employees/:id/reactivate
+// ---------------------------------------------------------------------------
+describe("POST /api/employees/:id/reactivate", () => {
+  const app = createApp();
+
+  const inactiveEmployee = { ...baseEmployee, isActive: false };
+  const reactivatedEmployee = { ...baseEmployee, isActive: true };
+
+  it("reactivates an inactive employee (admin only)", async () => {
+    mockPrisma.employee.findFirst.mockResolvedValue(inactiveEmployee);
+    mockPrisma.employee.update.mockResolvedValue(reactivatedEmployee);
+
+    const res = await request(app)
+      .post("/api/employees/emp-1/reactivate")
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.isActive).toBe(true);
+    expect(mockPrisma.employee.update).toHaveBeenCalledWith({
+      where: { id: "emp-1" },
+      data: { isActive: true },
+    });
+  });
+
+  it("returns 400 when employee is already active", async () => {
+    mockPrisma.employee.findFirst.mockResolvedValue({ ...baseEmployee, isActive: true });
+
+    const res = await request(app)
+      .post("/api/employees/emp-1/reactivate")
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 404 when employee does not exist", async () => {
+    mockPrisma.employee.findFirst.mockResolvedValue(null);
+
+    const res = await request(app)
+      .post("/api/employees/no-such-id/reactivate")
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 404 for cross-org access attempt", async () => {
+    mockPrisma.employee.findFirst.mockResolvedValue(null);
+
+    const res = await request(app)
+      .post("/api/employees/emp-1/reactivate")
+      .set("Authorization", `Bearer ${otherOrgToken}`);
+
+    expect(res.status).toBe(404);
+  });
+
+  it("MANAGER role cannot reactivate (ADMIN-only endpoint)", async () => {
+    const res = await request(app)
+      .post("/api/employees/emp-1/reactivate")
+      .set("Authorization", `Bearer ${managerToken}`);
+
+    expect(res.status).toBe(403);
+  });
+
+  it("EMPLOYEE role cannot reactivate (ADMIN-only endpoint)", async () => {
+    const res = await request(app)
+      .post("/api/employees/emp-1/reactivate")
+      .set("Authorization", `Bearer ${employeeToken}`);
+
+    expect(res.status).toBe(403);
+  });
+
+  it("rejects unauthenticated request", async () => {
+    const res = await request(app).post("/api/employees/emp-1/reactivate");
+    expect(res.status).toBe(401);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/employees — search & filter query params
+// ---------------------------------------------------------------------------
+describe("GET /api/employees — search and filter", () => {
+  const app = createApp();
+
+  it("passes search param to prisma query", async () => {
+    mockPrisma.employee.findMany.mockResolvedValue([baseEmployee]);
+
+    const res = await request(app)
+      .get("/api/employees?search=alice")
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(mockPrisma.employee.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          OR: expect.arrayContaining([
+            expect.objectContaining({ firstName: expect.objectContaining({ contains: "alice" }) }),
+            expect.objectContaining({ email: expect.objectContaining({ contains: "alice" }) }),
+          ]),
+        }),
+      })
+    );
+  });
+
+  it("filters active employees when status=active", async () => {
+    mockPrisma.employee.findMany.mockResolvedValue([baseEmployee]);
+
+    const res = await request(app)
+      .get("/api/employees?status=active")
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(mockPrisma.employee.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ isActive: true }),
+      })
+    );
+  });
+
+  it("filters inactive employees when status=inactive", async () => {
+    const inactive = { ...baseEmployee, isActive: false };
+    mockPrisma.employee.findMany.mockResolvedValue([inactive]);
+
+    const res = await request(app)
+      .get("/api/employees?status=inactive")
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(mockPrisma.employee.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ isActive: false }),
+      })
+    );
+  });
+
+  it("default (no status param) filters to active only", async () => {
+    mockPrisma.employee.findMany.mockResolvedValue([baseEmployee]);
+
+    await request(app)
+      .get("/api/employees")
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(mockPrisma.employee.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ isActive: true }),
+      })
+    );
+  });
+
+  it("includeInactive=true returns all employees (no isActive filter)", async () => {
+    mockPrisma.employee.findMany.mockResolvedValue([baseEmployee]);
+
+    await request(app)
+      .get("/api/employees?includeInactive=true")
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    const call = mockPrisma.employee.findMany.mock.calls[0][0];
+    // isActive should not be present when includeInactive=true with no explicit status
+    expect(call.where).not.toHaveProperty("isActive");
+  });
+
+  it("search combined with status filter passes both to prisma", async () => {
+    mockPrisma.employee.findMany.mockResolvedValue([baseEmployee]);
+
+    await request(app)
+      .get("/api/employees?search=alice&status=active")
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    const call = mockPrisma.employee.findMany.mock.calls[0][0];
+    expect(call.where).toHaveProperty("isActive", true);
+    expect(call.where).toHaveProperty("OR");
   });
 });
