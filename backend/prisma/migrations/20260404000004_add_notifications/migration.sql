@@ -1,3 +1,7 @@
+-- Drop old notifications table and enum from earlier migration
+DROP TABLE IF EXISTS "notifications";
+DROP TYPE IF EXISTS "NotificationType";
+
 -- CreateEnum
 CREATE TYPE "NotificationType" AS ENUM ('SHIFT_ASSIGNED', 'SHIFT_UPDATED', 'SHIFT_REMOVED', 'SCHEDULE_PUBLISHED');
 
