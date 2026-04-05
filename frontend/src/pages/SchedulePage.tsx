@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchShifts, fetchEmployees, Shift } from "../api/shifts";
 import { WeeklyCalendarGrid, ShiftMoveEvent } from "../components/schedule/WeeklyCalendarGrid";
 import { WeekNavigator } from "../components/schedule/WeekNavigator";
 import { ShiftFilter, FilterState } from "../components/schedule/ShiftFilter";
 import { CopyWeekModal } from "../components/schedule/CopyWeekModal";
+import { CopyWeekSpotlight } from "../components/schedule/CopyWeekSpotlight";
+import { useCopyWeekSpotlight } from "../hooks/useCopyWeekSpotlight";
 import { Navbar } from "../components/Navbar";
 
 function getWeekStart(date: Date): Date {
@@ -19,10 +21,17 @@ function toDateStr(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
+// A stable ID for the schedule page context — used to track view count for spotlight.
+// We use a well-known constant so the page identity is consistent across sessions.
+const SCHEDULE_PAGE_ID = "schedule-weekly-view";
+
 export function SchedulePage() {
   const [weekStart, setWeekStart] = useState<Date>(() => getWeekStart(new Date()));
   const [filter, setFilter] = useState<FilterState>({});
   const [copyModalOpen, setCopyModalOpen] = useState(false);
+  const copyWeekBtnRef = useRef<HTMLButtonElement>(null);
+  const { showSpotlight, dismissSpotlight, acceptSpotlight } =
+    useCopyWeekSpotlight(SCHEDULE_PAGE_ID);
 
   const weekEnd = new Date(weekStart);
   weekEnd.setUTCDate(weekEnd.getUTCDate() + 7);
@@ -52,7 +61,13 @@ export function SchedulePage() {
           <h1 style={s.pageTitle}>Schedule</h1>
           <p style={s.subtitle}>Visual team calendar</p>
         </div>
-        <button style={s.copyBtn} onClick={() => setCopyModalOpen(true)}>
+        <button
+          ref={copyWeekBtnRef}
+          style={s.copyBtn}
+          onClick={() => setCopyModalOpen(true)}
+          title="Copy this week's schedule to another week"
+          data-testid="copy-week-btn"
+        >
           Copy Week
         </button>
       </div>
@@ -96,6 +111,17 @@ export function SchedulePage() {
         onClose={() => setCopyModalOpen(false)}
         onSuccess={() => setCopyModalOpen(false)}
       />
+
+      {showSpotlight && (
+        <CopyWeekSpotlight
+          anchorRef={copyWeekBtnRef}
+          onDismiss={dismissSpotlight}
+          onTryItNow={() => {
+            acceptSpotlight();
+            setCopyModalOpen(true);
+          }}
+        />
+      )}
       </div>
     </div>
   );
@@ -124,13 +150,14 @@ const s: Record<string, React.CSSProperties> = {
   subtitle: { margin: 0, color: "#6b7280", fontSize: 14 },
   copyBtn: {
     padding: "9px 18px",
-    background: "#4f46e5",
-    color: "#fff",
-    border: "none",
+    background: "#fff",
+    color: "#4f46e5",
+    border: "1.5px solid #4f46e5",
     borderRadius: 7,
     fontSize: 14,
     fontWeight: 500,
     cursor: "pointer",
+    whiteSpace: "nowrap" as const,
   },
   toolbar: {
     marginBottom: 16,
