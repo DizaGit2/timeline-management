@@ -55,12 +55,6 @@ export function WeekNavigator({ currentWeekStart, onWeekChange }: Props) {
     onWeekChange(getWeekStart(new Date()));
   }
 
-  function handleDateChange(e: React.ChangeEvent<HTMLInputElement>) {
-    if (!e.target.value) return;
-    const picked = new Date(e.target.value + "T00:00:00.000Z");
-    onWeekChange(getWeekStart(picked));
-  }
-
   function handleDateKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter") {
       const input = e.currentTarget;
