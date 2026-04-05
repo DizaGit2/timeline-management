@@ -29,6 +29,15 @@ enum Recurrence {
   custom
 }
 
+enum SwapRequestStatus {
+  pending_target
+  pending_manager
+  approved
+  rejected
+  expired
+  cancelled
+}
+
 // ─── Models ──────────────────────────────────────────────
 
 model Organization {
@@ -53,8 +62,9 @@ model User {
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
-  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  employee     Employee?
+  organization  Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  employee      Employee?
+  resolvedSwaps SwapRequest[]
 
   @@index([orgId])
   @@map("users")
@@ -72,10 +82,12 @@ model Employee {
   hiredAt   DateTime?
   createdAt DateTime  @default(now())
 
-  organization   Organization   @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  user           User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
-  shifts         Shift[]
-  availabilities Availability[]
+  organization            Organization   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user                    User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  shifts                  Shift[]
+  availabilities          Availability[]
+  requestingSwapRequests  SwapRequest[]  @relation("RequestingEmployee")
+  targetSwapRequests      SwapRequest[]  @relation("TargetEmployee")
 
   @@index([orgId])
   @@index([email])
@@ -91,8 +103,9 @@ model Schedule {
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
 
-  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  shifts       Shift[]
+  organization  Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  shifts        Shift[]
+  swapRequests  SwapRequest[]
 
   @@index([orgId])
   @@index([weekStart])
@@ -109,8 +122,10 @@ model Shift {
   notes      String?
   createdAt  DateTime @default(now())
 
-  schedule Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
-  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  schedule               Schedule      @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  employee               Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  requestingSwapRequests SwapRequest[] @relation("RequestingShift")
+  targetSwapRequests     SwapRequest[] @relation("TargetShift")
 
   @@index([scheduleId])
   @@index([employeeId])
@@ -131,4 +146,30 @@ model Availability {
 
   @@index([employeeId])
   @@map("availabilities")
+}
+
+model SwapRequest {
+  id                   String            @id @default(uuid()) @db.Uuid
+  scheduleId           String            @db.Uuid
+  requestingEmployeeId String            @db.Uuid
+  requestingShiftId    String            @db.Uuid
+  targetEmployeeId     String?           @db.Uuid
+  targetShiftId        String?           @db.Uuid
+  status               SwapRequestStatus @default(pending_target)
+  resolvedAt           DateTime?
+  resolvedBy           String?           @db.Uuid
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  schedule           Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  requestingEmployee Employee @relation("RequestingEmployee", fields: [requestingEmployeeId], references: [id], onDelete: Cascade)
+  requestingShift    Shift    @relation("RequestingShift", fields: [requestingShiftId], references: [id], onDelete: Cascade)
+  targetEmployee     Employee? @relation("TargetEmployee", fields: [targetEmployeeId], references: [id], onDelete: SetNull)
+  targetShift        Shift?    @relation("TargetShift", fields: [targetShiftId], references: [id], onDelete: SetNull)
+  resolver           User?     @relation(fields: [resolvedBy], references: [id], onDelete: SetNull)
+
+  @@index([status, scheduleId])
+  @@index([requestingEmployeeId])
+  @@index([targetEmployeeId])
+  @@map("swap_requests")
 }
