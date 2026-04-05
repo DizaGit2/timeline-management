@@ -21,7 +21,7 @@ export function authGuard(req: Request, _res: Response, next: NextFunction): voi
   const authHeader = req.headers.authorization;
 
   if (!authHeader?.startsWith("Bearer ")) {
-    throw new AppError(401, "Missing or invalid authorization header");
+    return next(new AppError(401, "Missing or invalid authorization header"));
   }
 
   const token = authHeader.slice(7);
@@ -31,17 +31,17 @@ export function authGuard(req: Request, _res: Response, next: NextFunction): voi
     req.user = payload;
     next();
   } catch {
-    throw new AppError(401, "Invalid or expired token");
+    return next(new AppError(401, "Invalid or expired token"));
   }
 }
 
 export function requireRole(...roles: string[]) {
   return (req: Request, _res: Response, next: NextFunction): void => {
     if (!req.user) {
-      throw new AppError(401, "Not authenticated");
+      return next(new AppError(401, "Not authenticated"));
     }
     if (!roles.includes(req.user.role)) {
-      throw new AppError(403, "Insufficient permissions");
+      return next(new AppError(403, "Insufficient permissions"));
     }
     next();
   };
