@@ -26,8 +26,14 @@ import { sendEmail } from "../lib/email";
 const mockSendEmail = sendEmail as jest.Mock;
 
 /** Flush all pending microtasks / promise chains. */
-function flushPromises(): Promise<void> {
-  return new Promise((resolve) => setImmediate(resolve));
+/** Wait for all pending async chains (including DB-backed fire-and-forget). */
+async function flushPromises(): Promise<void> {
+  // Multiple rounds ensure the DB query + sendEmail chain completes.
+  for (let i = 0; i < 5; i++) {
+    await new Promise((resolve) => setImmediate(resolve));
+  }
+  // Small timeout for any remaining I/O callbacks.
+  await new Promise((resolve) => setTimeout(resolve, 50));
 }
 
 // ---------------------------------------------------------------------------
