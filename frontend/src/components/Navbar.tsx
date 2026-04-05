@@ -50,10 +50,16 @@ export function Navbar() {
             <Link to="/reports" style={navLinkStyle('/reports')}>
               Reports
             </Link>
+            <Link to="/swap-requests" style={navLinkStyle('/swap-requests')}>
+              Swap Requests
+            </Link>
           </>
         )}
         <Link to="/my-schedule" style={navLinkStyle('/my-schedule')}>
           My Schedule
+        </Link>
+        <Link to="/my-swap-requests" style={navLinkStyle('/my-swap-requests')}>
+          My Swaps
         </Link>
       </nav>
       <div style={s.headerRight}>

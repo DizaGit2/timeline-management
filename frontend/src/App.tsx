@@ -14,6 +14,8 @@ import { EmployeesPage } from './pages/EmployeesPage'
 import { MySchedulePage } from './pages/MySchedulePage'
 import { AvailabilityPage } from './pages/AvailabilityPage'
 import { ReportsPage } from './pages/ReportsPage'
+import { ManagerSwapRequestsPage } from './pages/ManagerSwapRequestsPage'
+import { MySwapRequestsPage } from './pages/MySwapRequestsPage'
 
 export function App() {
   return (
@@ -35,6 +37,7 @@ export function App() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/my-schedule" element={<MySchedulePage />} />
             <Route path="/availability/:employeeId" element={<AvailabilityPage />} />
+            <Route path="/my-swap-requests" element={<MySwapRequestsPage />} />
           </Route>
 
           {/* Shift management — Admin + Manager */}
@@ -44,6 +47,7 @@ export function App() {
             <Route path="/schedules" element={<SchedulesPage />} />
             <Route path="/employees" element={<EmployeesPage />} />
             <Route path="/reports" element={<ReportsPage />} />
+            <Route path="/swap-requests" element={<ManagerSwapRequestsPage />} />
           </Route>
 
           {/* Admin-only routes */}
