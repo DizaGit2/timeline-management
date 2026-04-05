@@ -97,9 +97,9 @@ describe("WeeklyCalendarGrid — Drag and Drop", () => {
       );
     });
 
-    // Should immediately appear in Wednesday column (optimistic)
+    // targetDayIndex:4 → targetDayOfWeek:3 (Wed Apr8) → offset 2 from Apr6 weekStart → col 2
     await waitFor(() => {
-      const wednesdayCol = screen.getByTestId("day-col-4");
+      const wednesdayCol = screen.getByTestId("day-col-2");
       expect(wednesdayCol).toContainElement(screen.getByTestId("shift-block-shift-1"));
     });
   });
@@ -115,8 +115,8 @@ describe("WeeklyCalendarGrid — Drag and Drop", () => {
       <WeeklyCalendarGrid shifts={mockShifts} weekStart={WEEK_START} onShiftMove={onShiftMove} />
     );
 
-    // shift-1 starts in Tuesday (index 3)
-    const originalCol = screen.getByTestId("day-col-3");
+    // shift-1 on Tue Apr7 → offset 1 from Apr6 weekStart → col 1
+    const originalCol = screen.getByTestId("day-col-1");
     expect(originalCol).toContainElement(screen.getByTestId("shift-block-shift-1"));
 
     act(() => {
@@ -128,9 +128,9 @@ describe("WeeklyCalendarGrid — Drag and Drop", () => {
       );
     });
 
-    // After API failure, shift should be back in Tuesday
+    // After API failure, shift should be back in Tuesday (col 1)
     await waitFor(() => {
-      expect(screen.getByTestId("day-col-3")).toContainElement(
+      expect(screen.getByTestId("day-col-1")).toContainElement(
         screen.getByTestId("shift-block-shift-1")
       );
     });

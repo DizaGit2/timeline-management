@@ -36,7 +36,7 @@ export const mockEmployees: Employee[] = [
   },
 ];
 
-/** Week starting 2026-04-06 (Sunday) */
+/** Week starting 2026-04-06 (Monday) — col 0 = Mon Apr 6, col 1 = Tue Apr 7, col 3 = Thu Apr 9 */
 export const WEEK_START = new Date("2026-04-06T00:00:00.000Z");
 export const WEEK_END = new Date("2026-04-12T23:59:59.999Z");
 
