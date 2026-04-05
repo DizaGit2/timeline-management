@@ -16,7 +16,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, within, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, within, fireEvent, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw";
@@ -238,12 +238,11 @@ describe("SchedulesPage — form validation", () => {
     // fireEvent.submit bypasses native HTML5 required-field validation so the
     // component's own setFormError("Schedule name is required.") can be tested.
     const form = screen.getByRole("button", { name: /create schedule/i }).closest("form");
-    fireEvent.submit(form!);
-
-    await waitFor(() => {
-      // Component sets: "Schedule name is required."
-      expect(screen.getByText(/schedule name is required/i)).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.submit(form!);
     });
+
+    expect(screen.getByText(/schedule name is required/i)).toBeInTheDocument();
   });
 
   it("shows an error when submitting with missing start date", async () => {
@@ -253,14 +252,14 @@ describe("SchedulesPage — form validation", () => {
 
     // fireEvent.submit bypasses native required validation; dates are still empty
     const form = screen.getByRole("button", { name: /create schedule/i }).closest("form");
-    fireEvent.submit(form!);
-
-    await waitFor(() => {
-      // Component sets: "Start date and end date are required."
-      expect(
-        screen.getByText(/start date and end date are required/i)
-      ).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.submit(form!);
     });
+
+    // Component sets: "Start date and end date are required."
+    expect(
+      screen.getByText(/start date and end date are required/i)
+    ).toBeInTheDocument();
   });
 
   it("shows an error when end date is before start date", async () => {
