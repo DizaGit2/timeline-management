@@ -28,6 +28,9 @@ export function DashboardPage() {
               <Link to="/shifts" style={s.navLink}>
                 Shifts
               </Link>
+              <Link to="/employees" style={s.navLink}>
+                Employees
+              </Link>
             </>
           )}
         </nav>
@@ -74,6 +77,10 @@ export function DashboardPage() {
               <Link to="/shifts" style={s.quickLink}>
                 <span style={s.quickLinkIcon}>📋</span>
                 <span>Manage Shifts</span>
+              </Link>
+              <Link to="/employees" style={s.quickLink}>
+                <span style={s.quickLinkIcon}>👥</span>
+                <span>Manage Employees</span>
               </Link>
             </div>
           </div>
