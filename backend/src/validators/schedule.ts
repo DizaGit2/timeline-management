@@ -10,8 +10,8 @@ const scheduleBaseSchema = z.object({
 });
 
 export const createScheduleSchema = scheduleBaseSchema.refine(
-  (data) => new Date(data.endDate) >= new Date(data.startDate),
-  { message: "endDate must be on or after startDate", path: ["endDate"] },
+  (data) => new Date(data.endDate) > new Date(data.startDate),
+  { message: "endDate must be after startDate", path: ["endDate"] },
 );
 
 export const updateScheduleSchema = scheduleBaseSchema.partial();

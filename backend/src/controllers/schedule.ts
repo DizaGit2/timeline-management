@@ -104,6 +104,13 @@ export async function updateSchedule(req: Request, res: Response): Promise<void>
     }
   }
 
+  // Validate date range when either date is provided
+  const effectiveStart = data.startDate ? new Date(data.startDate) : existing.startDate;
+  const effectiveEnd = data.endDate ? new Date(data.endDate) : existing.endDate;
+  if (effectiveEnd <= effectiveStart) {
+    throw new AppError(400, "endDate must be after startDate");
+  }
+
   const updateData: Record<string, unknown> = {};
   if (data.name !== undefined) updateData.name = data.name;
   if (data.startDate !== undefined) updateData.startDate = new Date(data.startDate);

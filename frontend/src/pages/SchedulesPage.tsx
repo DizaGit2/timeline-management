@@ -112,7 +112,7 @@ export function SchedulesPage() {
       setFormError("Start date and end date are required.");
       return;
     }
-    if (form.startDate > form.endDate) {
+    if (form.startDate >= form.endDate) {
       setFormError("Start date must be before end date.");
       return;
     }
