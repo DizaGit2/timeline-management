@@ -36,9 +36,9 @@ export const mockEmployees: Employee[] = [
   },
 ];
 
-/** Week starting 2026-04-06 (Sunday) */
-export const WEEK_START = new Date("2026-04-06T00:00:00.000Z");
-export const WEEK_END = new Date("2026-04-12T23:59:59.999Z");
+/** Week starting 2026-04-04 (Saturday) — col 0 = Apr 4, col 3 = Tue Apr 7, col 5 = Thu Apr 9 */
+export const WEEK_START = new Date("2026-04-04T00:00:00.000Z");
+export const WEEK_END = new Date("2026-04-10T23:59:59.999Z");
 
 export const mockShifts: Shift[] = [
   {
