@@ -10,8 +10,8 @@ COPY tsconfig.json ./
 COPY prisma ./prisma/
 COPY src ./src/
 
-RUN npm run build
 RUN npx prisma generate
+RUN npm run build
 
 # Production stage
 FROM node:20-alpine AS runner
