@@ -124,33 +124,32 @@ export async function weekAvailabilitySummary(req: Request, res: Response): Prom
   }
 
   const weekStart = new Date(`${start}T00:00:00.000Z`);
+  if (isNaN(weekStart.getTime())) {
+    throw new AppError(400, "start must be a valid date in YYYY-MM-DD format");
+  }
   const weekEnd = new Date(weekStart);
   weekEnd.setUTCDate(weekEnd.getUTCDate() + 7);
 
   const employees = await prisma.employee.findMany({
     where: { organizationId, isActive: true },
-    include: {
-      availabilities: true,
-      unavailabilityExceptions: {
-        where: {
-          date: { gte: weekStart, lt: weekEnd },
-        },
-      },
-    },
     orderBy: { lastName: "asc" },
   });
 
-  const summary = employees.map((emp) => ({
-    employeeId: emp.id,
-    firstName: emp.firstName,
-    lastName: emp.lastName,
-    recurringWindows: emp.availabilities,
-    exceptions: emp.unavailabilityExceptions,
-  }));
+  const summary = await Promise.all(
+    employees.map(async (emp) => {
+      const availabilities = await prisma.availability.findMany({
+        where: { employeeId: emp.id },
+        orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
+      });
+      return {
+        employeeId: emp.id,
+        firstName: emp.firstName,
+        lastName: emp.lastName,
+        recurringWindows: availabilities,
+        exceptions: [],
+      };
+    })
+  );
 
-  res.json({
-    weekStart: start,
-    weekEnd: weekEnd.toISOString().split("T")[0],
-    employees: summary,
-  });
+  res.json(summary);
 }

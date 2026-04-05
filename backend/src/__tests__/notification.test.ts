@@ -188,6 +188,8 @@ describe("Email notifications via shift lifecycle events", () => {
       .set("Authorization", `Bearer ${managerToken}`)
       .send({ employeeIds: [employeeId] });
 
+    // Drain the fire-and-forget assign email before clearing
+    await flushPromises();
     mockSendEmail.mockClear();
     await prisma.notification.deleteMany({ where: { userId } });
 
