@@ -17,6 +17,7 @@ model Organization {
   users     User[]
   employees Employee[]
   schedules Schedule[]
+  teams     Team[]
 
   @@map("organizations")
 }
@@ -81,7 +82,9 @@ model Employee {
   shiftAssignments          ShiftAssignment[]
   availabilities            Availability[]
   unavailabilityExceptions  UnavailabilityException[]
+  teamMemberships           TeamMember[]
 
+  @@index([organizationId])
   @@map("employees")
 }
 
@@ -90,14 +93,20 @@ model Schedule {
   name           String
   startDate      DateTime       @map("start_date")
   endDate        DateTime       @map("end_date")
+  location       String?
+  teamId         String?        @map("team_id")
   status         ScheduleStatus @default(DRAFT)
   organizationId String         @map("organization_id")
   createdAt      DateTime       @default(now()) @map("created_at")
   updatedAt      DateTime       @updatedAt @map("updated_at")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  team         Team?        @relation(fields: [teamId], references: [id], onDelete: SetNull)
   shifts       Shift[]
 
+  @@index([organizationId])
+  @@index([status])
+  @@index([startDate, endDate])
   @@map("schedules")
 }
 
@@ -173,6 +182,34 @@ model UnavailabilityException {
   @@index([employeeId])
   @@index([date])
   @@map("unavailability_exceptions")
+}
+
+model Team {
+  id             String   @id @default(uuid())
+  name           String
+  organizationId String   @map("organization_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members      TeamMember[]
+  schedules    Schedule[]
+
+  @@index([organizationId])
+  @@map("teams")
+}
+
+model TeamMember {
+  teamId     String   @map("team_id")
+  employeeId String   @map("employee_id")
+  joinedAt   DateTime @default(now()) @map("joined_at")
+
+  team     Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@id([teamId, employeeId])
+  @@index([employeeId])
+  @@map("team_members")
 }
 
 model Notification {
