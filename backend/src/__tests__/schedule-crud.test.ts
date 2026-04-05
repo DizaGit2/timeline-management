@@ -351,7 +351,7 @@ describe("POST /api/schedules — create schedule", () => {
     expect(res.body.status).toBe("DRAFT");
   });
 
-  it("creates a schedule with PUBLISHED status", async () => {
+  it("always creates with DRAFT status even if PUBLISHED is requested", async () => {
     const res = await request(app)
       .post("/api/schedules")
       .set("Authorization", `Bearer ${managerToken}`)
@@ -359,11 +359,10 @@ describe("POST /api/schedules — create schedule", () => {
         name: "Published Schedule",
         startDate: "2026-06-15T00:00:00.000Z",
         endDate: "2026-06-21T23:59:59.000Z",
-        status: "PUBLISHED",
       });
 
     expect(res.status).toBe(201);
-    expect(res.body.status).toBe("PUBLISHED");
+    expect(res.body.status).toBe("DRAFT");
   });
 
   it("returns 400 when name is missing", async () => {
@@ -428,7 +427,7 @@ describe("POST /api/schedules — create schedule", () => {
     expect(res.status).toBe(400);
   });
 
-  it("returns 400 when status is not a recognized value", async () => {
+  it("ignores status field on creation and always creates as DRAFT", async () => {
     const res = await request(app)
       .post("/api/schedules")
       .set("Authorization", `Bearer ${managerToken}`)
@@ -436,10 +435,11 @@ describe("POST /api/schedules — create schedule", () => {
         name: "Bad Status",
         startDate: "2026-06-01T00:00:00.000Z",
         endDate: "2026-06-07T23:59:59.000Z",
-        status: "INVALID_STATUS",
+        status: "PUBLISHED",
       });
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(201);
+    expect(res.body.status).toBe("DRAFT");
   });
 
   it("allows ADMIN to create a schedule", async () => {
@@ -707,6 +707,181 @@ describe("DELETE /api/schedules/:id — delete schedule", () => {
       .set("Authorization", `Bearer ${adminToken}`);
 
     expect(res.status).toBe(204);
+  });
+});
+
+// ── TC-SCH-10: Publish schedule ──────────────────────────────────────────────
+
+describe("POST /api/schedules/:id/publish — publish schedule", () => {
+  let orgId: string;
+  let managerToken: string;
+  let employeeToken: string;
+
+  beforeAll(async () => {
+    const org = await createOrg("Publish");
+    orgId = org.id;
+    const manager = await createUser(orgId, "MANAGER", "publish-mgr");
+    managerToken = await loginAs(manager.email);
+    const emp = await createUser(orgId, "EMPLOYEE", "publish-emp");
+    employeeToken = await loginAs(emp.email);
+  });
+
+  afterAll(async () => {
+    await prisma.organization.deleteMany({ where: { id: orgId } });
+  });
+
+  it("returns 401 when not authenticated", async () => {
+    const schedule = await seedSchedule(orgId);
+    const res = await request(app).post(`/api/schedules/${schedule.id}/publish`);
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 403 when an EMPLOYEE tries to publish", async () => {
+    const schedule = await seedSchedule(orgId);
+    const res = await request(app)
+      .post(`/api/schedules/${schedule.id}/publish`)
+      .set("Authorization", `Bearer ${employeeToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it("publishes a DRAFT schedule", async () => {
+    const schedule = await seedSchedule(orgId, { status: "DRAFT" });
+
+    const res = await request(app)
+      .post(`/api/schedules/${schedule.id}/publish`)
+      .set("Authorization", `Bearer ${managerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe("PUBLISHED");
+  });
+
+  it("returns 400 when publishing an already PUBLISHED schedule", async () => {
+    const schedule = await seedSchedule(orgId, { status: "PUBLISHED" });
+
+    const res = await request(app)
+      .post(`/api/schedules/${schedule.id}/publish`)
+      .set("Authorization", `Bearer ${managerToken}`);
+
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when publishing an ARCHIVED schedule", async () => {
+    const schedule = await seedSchedule(orgId, { status: "ARCHIVED" });
+
+    const res = await request(app)
+      .post(`/api/schedules/${schedule.id}/publish`)
+      .set("Authorization", `Bearer ${managerToken}`);
+
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 404 for a non-existent schedule", async () => {
+    const res = await request(app)
+      .post("/api/schedules/nonexistent-id/publish")
+      .set("Authorization", `Bearer ${managerToken}`);
+
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 404 when publishing a schedule from another org", async () => {
+    const otherOrg = await createOrg("OtherPublish");
+    const otherSchedule = await seedSchedule(otherOrg.id);
+
+    const res = await request(app)
+      .post(`/api/schedules/${otherSchedule.id}/publish`)
+      .set("Authorization", `Bearer ${managerToken}`);
+
+    expect(res.status).toBe(404);
+
+    await prisma.organization.delete({ where: { id: otherOrg.id } });
+  });
+});
+
+// ── TC-SCH-11: Shift count ──────────────────────────────────────────────────
+
+describe("GET /api/schedules/:id/shift-count — get shift count", () => {
+  let orgId: string;
+  let managerToken: string;
+
+  beforeAll(async () => {
+    const org = await createOrg("ShiftCount");
+    orgId = org.id;
+    const manager = await createUser(orgId, "MANAGER", "shiftcount-mgr");
+    managerToken = await loginAs(manager.email);
+  });
+
+  afterAll(async () => {
+    await prisma.organization.deleteMany({ where: { id: orgId } });
+  });
+
+  it("returns 401 when not authenticated", async () => {
+    const schedule = await seedSchedule(orgId);
+    const res = await request(app).get(`/api/schedules/${schedule.id}/shift-count`);
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 0 for a schedule with no shifts", async () => {
+    const schedule = await seedSchedule(orgId);
+
+    const res = await request(app)
+      .get(`/api/schedules/${schedule.id}/shift-count`)
+      .set("Authorization", `Bearer ${managerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ scheduleId: schedule.id, shiftCount: 0 });
+  });
+
+  it("returns the correct count when shifts exist", async () => {
+    const schedule = await seedSchedule(orgId);
+    const employee = await createEmployee(orgId);
+    await prisma.shift.createMany({
+      data: [
+        { scheduleId: schedule.id, employeeId: employee.id, title: "Morning", startTime: new Date("2026-05-05T08:00:00Z"), endTime: new Date("2026-05-05T16:00:00Z") },
+        { scheduleId: schedule.id, employeeId: employee.id, title: "Evening", startTime: new Date("2026-05-05T16:00:00Z"), endTime: new Date("2026-05-06T00:00:00Z") },
+        { scheduleId: schedule.id, title: "Night", startTime: new Date("2026-05-06T00:00:00Z"), endTime: new Date("2026-05-06T08:00:00Z") },
+      ],
+    });
+
+    const res = await request(app)
+      .get(`/api/schedules/${schedule.id}/shift-count`)
+      .set("Authorization", `Bearer ${managerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ scheduleId: schedule.id, shiftCount: 3 });
+  });
+
+  it("returns 404 for a non-existent schedule", async () => {
+    const res = await request(app)
+      .get("/api/schedules/nonexistent-id/shift-count")
+      .set("Authorization", `Bearer ${managerToken}`);
+
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 404 for a schedule from another organization", async () => {
+    const otherOrg = await createOrg("OtherCount");
+    const otherSchedule = await seedSchedule(otherOrg.id);
+
+    const res = await request(app)
+      .get(`/api/schedules/${otherSchedule.id}/shift-count`)
+      .set("Authorization", `Bearer ${managerToken}`);
+
+    expect(res.status).toBe(404);
+
+    await prisma.organization.delete({ where: { id: otherOrg.id } });
+  });
+
+  it("allows EMPLOYEE role to check shift count", async () => {
+    const emp = await createUser(orgId, "EMPLOYEE", "shiftcount-emp");
+    const empToken = await loginAs(emp.email);
+    const schedule = await seedSchedule(orgId);
+
+    const res = await request(app)
+      .get(`/api/schedules/${schedule.id}/shift-count`)
+      .set("Authorization", `Bearer ${empToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.shiftCount).toBe(0);
   });
 });
 
