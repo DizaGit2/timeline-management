@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 import axios from "axios";
 
-const API = (import.meta as ImportMeta & { env: Record<string, string> }).env?.VITE_API_URL ?? "http://localhost:3000";
+const API = (import.meta as ImportMeta & { env: Record<string, string> }).env?.VITE_API_URL ?? "";
 
 export interface Employee {
   id: string;
