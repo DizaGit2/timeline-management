@@ -14,6 +14,7 @@ import { EmployeesPage } from './pages/EmployeesPage'
 import { MySchedulePage } from './pages/MySchedulePage'
 import { AvailabilityPage } from './pages/AvailabilityPage'
 import { ReportsPage } from './pages/ReportsPage'
+import { ScheduleDetailPage } from './pages/ScheduleDetailPage'
 
 export function App() {
   return (
@@ -42,6 +43,7 @@ export function App() {
             <Route path="/shifts" element={<ShiftsPage />} />
             <Route path="/schedule" element={<SchedulePage />} />
             <Route path="/schedules" element={<SchedulesPage />} />
+            <Route path="/schedules/:id" element={<ScheduleDetailPage />} />
             <Route path="/employees" element={<EmployeesPage />} />
             <Route path="/reports" element={<ReportsPage />} />
           </Route>

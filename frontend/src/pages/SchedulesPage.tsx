@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   fetchSchedules,
@@ -33,6 +34,7 @@ function formatDate(iso: string) {
 }
 
 export function SchedulesPage() {
+  const navigate = useNavigate();
   const qc = useQueryClient();
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -196,7 +198,12 @@ export function SchedulesPage() {
                 return (
                   <tr key={schedule.id} style={s.tr}>
                     <td style={s.td}>
-                      <div style={s.scheduleName}>{schedule.name}</div>
+                      <div
+                        style={{ ...s.scheduleName, ...s.scheduleNameLink }}
+                        onClick={() => navigate(`/schedules/${schedule.id}`)}
+                      >
+                        {schedule.name}
+                      </div>
                     </td>
                     <td style={s.td}>{formatDate(schedule.startDate)}</td>
                     <td style={s.td}>{formatDate(schedule.endDate)}</td>
@@ -425,6 +432,7 @@ const s: Record<string, React.CSSProperties> = {
   td: { padding: "12px 14px", color: "#374151", verticalAlign: "top" },
   tdActions: { padding: "10px 14px", whiteSpace: "nowrap" as const },
   scheduleName: { fontWeight: 600, color: "#111827" },
+  scheduleNameLink: { cursor: "pointer", color: "#4f46e5", textDecoration: "underline" },
   editBtn: {
     marginRight: 6,
     padding: "5px 12px",
