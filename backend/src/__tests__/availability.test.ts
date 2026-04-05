@@ -30,7 +30,7 @@ import jwt from "jsonwebtoken";
 import { config } from "../config";
 import { errorHandler } from "../middleware/errorHandler";
 import employeeRoutes from "../routes/employee";
-import { employeeAvailabilityRouter } from "../routes/availability";
+import availabilityRoutes, { employeeAvailabilityRouter } from "../routes/availability";
 
 // ---------------------------------------------------------------------------
 // Prisma mock
@@ -62,6 +62,7 @@ jest.mock("../lib/prisma", () => ({
       findUnique: jest.fn(),
       delete: jest.fn(),
     },
+    $transaction: jest.fn(),
   },
 }));
 
@@ -72,7 +73,13 @@ const mockPrisma = prisma as unknown as {
   availability: { [k: string]: jest.Mock };
   shift: { [k: string]: jest.Mock };
   shiftAssignment: { [k: string]: jest.Mock };
+  $transaction: jest.Mock;
 };
+
+// Default $transaction implementation: pass the mock prisma as the transaction client
+beforeEach(() => {
+  mockPrisma.$transaction.mockImplementation((cb: (tx: typeof mockPrisma) => Promise<unknown>) => cb(mockPrisma));
+});
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -82,6 +89,7 @@ function createApp() {
   app.use(express.json());
   app.use("/api/employees", employeeRoutes);
   app.use("/api/employees/:id", employeeAvailabilityRouter);
+  app.use("/api/employees/availability", availabilityRoutes);
   app.use(errorHandler);
   return app;
 }
