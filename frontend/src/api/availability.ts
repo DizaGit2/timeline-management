@@ -1,12 +1,4 @@
-/// <reference types="vite/client" />
-import axios from "axios";
-
-const API = (import.meta as ImportMeta & { env: Record<string, string> }).env?.VITE_API_URL ?? "";
-
-function authHeader() {
-  const token = localStorage.getItem("accessToken");
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
+import { axiosInstance as axios } from "./axiosInstance";
 
 export interface AvailabilityWindow {
   id: string;
@@ -27,8 +19,7 @@ export interface UnavailabilityException {
 
 export async function getAvailability(employeeId: string): Promise<AvailabilityWindow[]> {
   const { data } = await axios.get<AvailabilityWindow[]>(
-    `${API}/api/employees/${employeeId}/availability`,
-    { headers: authHeader() }
+    `/api/employees/${employeeId}/availability`
   );
   return data;
 }
@@ -43,9 +34,8 @@ export async function replaceAvailability(
   }>
 ): Promise<AvailabilityWindow[]> {
   const { data } = await axios.put<AvailabilityWindow[]>(
-    `${API}/api/employees/${employeeId}/availability`,
-    windows,
-    { headers: authHeader() }
+    `/api/employees/${employeeId}/availability`,
+    windows
   );
   return data;
 }
@@ -54,8 +44,7 @@ export async function listUnavailability(
   employeeId: string
 ): Promise<UnavailabilityException[]> {
   const { data } = await axios.get<UnavailabilityException[]>(
-    `${API}/api/employees/${employeeId}/unavailability`,
-    { headers: authHeader() }
+    `/api/employees/${employeeId}/unavailability`
   );
   return data;
 }
@@ -65,9 +54,8 @@ export async function createUnavailability(
   payload: { date: string; reason?: string }
 ): Promise<UnavailabilityException> {
   const { data } = await axios.post<UnavailabilityException>(
-    `${API}/api/employees/${employeeId}/unavailability`,
-    payload,
-    { headers: authHeader() }
+    `/api/employees/${employeeId}/unavailability`,
+    payload
   );
   return data;
 }
@@ -77,7 +65,6 @@ export async function deleteUnavailability(
   exceptionId: string
 ): Promise<void> {
   await axios.delete(
-    `${API}/api/employees/${employeeId}/unavailability/${exceptionId}`,
-    { headers: authHeader() }
+    `/api/employees/${employeeId}/unavailability/${exceptionId}`
   );
 }

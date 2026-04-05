@@ -14,6 +14,7 @@ import {
   apiRegister,
   type AuthUser,
 } from '../api/auth'
+import { setTokenGetter } from '../api/axiosInstance'
 
 // Access token is kept in memory only (never persisted).
 // Refresh token is stored in localStorage for MVP.
@@ -48,6 +49,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Access token lives only in memory.
   const accessTokenRef = useRef<string | null>(null)
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Register token getter with the shared axios instance once on mount.
+  useEffect(() => {
+    setTokenGetter(() => accessTokenRef.current)
+  }, [])
 
   function scheduleRefresh() {
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)

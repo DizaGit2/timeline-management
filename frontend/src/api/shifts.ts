@@ -1,7 +1,4 @@
-/// <reference types="vite/client" />
-import axios from "axios";
-
-const API = (import.meta as ImportMeta & { env: Record<string, string> }).env?.VITE_API_URL ?? "";
+import { axiosInstance as axios } from "./axiosInstance";
 
 export interface Employee {
   id: string;
@@ -75,11 +72,6 @@ export interface ShiftFilters {
   to?: string;
 }
 
-function authHeader() {
-  const token = localStorage.getItem("accessToken");
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
 export async function fetchShifts(filters?: ShiftFilters): Promise<Shift[]> {
   const params = new URLSearchParams();
   if (filters?.scheduleId) params.set("scheduleId", filters.scheduleId);
@@ -87,17 +79,12 @@ export async function fetchShifts(filters?: ShiftFilters): Promise<Shift[]> {
   if (filters?.from) params.set("from", filters.from);
   if (filters?.to) params.set("to", filters.to);
 
-  const { data } = await axios.get<Shift[]>(`${API}/api/shifts`, {
-    params,
-    headers: authHeader(),
-  });
+  const { data } = await axios.get<Shift[]>(`/api/shifts`, { params });
   return data;
 }
 
 export async function createShift(payload: CreateShiftPayload): Promise<Shift> {
-  const { data } = await axios.post<Shift>(`${API}/api/shifts`, payload, {
-    headers: authHeader(),
-  });
+  const { data } = await axios.post<Shift>(`/api/shifts`, payload);
   return data;
 }
 
@@ -105,14 +92,12 @@ export async function updateShift(
   id: string,
   payload: UpdateShiftPayload
 ): Promise<Shift> {
-  const { data } = await axios.put<Shift>(`${API}/api/shifts/${id}`, payload, {
-    headers: authHeader(),
-  });
+  const { data } = await axios.put<Shift>(`/api/shifts/${id}`, payload);
   return data;
 }
 
 export async function deleteShift(id: string): Promise<void> {
-  await axios.delete(`${API}/api/shifts/${id}`, { headers: authHeader() });
+  await axios.delete(`/api/shifts/${id}`);
 }
 
 export async function assignEmployees(
@@ -120,9 +105,8 @@ export async function assignEmployees(
   employeeIds: string[]
 ): Promise<Shift> {
   const { data } = await axios.post<Shift>(
-    `${API}/api/shifts/${shiftId}/assign`,
-    { employeeIds },
-    { headers: authHeader() }
+    `/api/shifts/${shiftId}/assign`,
+    { employeeIds }
   );
   return data;
 }
@@ -131,9 +115,7 @@ export async function removeAssignment(
   shiftId: string,
   employeeId: string
 ): Promise<void> {
-  await axios.delete(`${API}/api/shifts/${shiftId}/employees/${employeeId}`, {
-    headers: authHeader(),
-  });
+  await axios.delete(`/api/shifts/${shiftId}/employees/${employeeId}`);
 }
 
 export async function fetchShiftConflicts(
@@ -144,8 +126,8 @@ export async function fetchShiftConflicts(
   if (employeeId) params.set("employeeId", employeeId);
 
   const { data } = await axios.get<{ conflicts: ShiftConflict[] }>(
-    `${API}/api/shifts/${shiftId}/conflicts`,
-    { params, headers: authHeader() }
+    `/api/shifts/${shiftId}/conflicts`,
+    { params }
   );
   return data.conflicts;
 }
@@ -153,15 +135,11 @@ export async function fetchShiftConflicts(
 export async function fetchEmployees(): Promise<
   Array<{ id: string; firstName: string; lastName: string; position: string | null }>
 > {
-  const { data } = await axios.get(`${API}/api/employees`, {
-    headers: authHeader(),
-  });
+  const { data } = await axios.get(`/api/employees`);
   return data;
 }
 
 export async function fetchSchedules(): Promise<Schedule[]> {
-  const { data } = await axios.get<Schedule[]>(`${API}/api/schedules`, {
-    headers: authHeader(),
-  });
+  const { data } = await axios.get<Schedule[]>(`/api/schedules`);
   return data;
 }

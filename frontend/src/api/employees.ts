@@ -1,12 +1,4 @@
-/// <reference types="vite/client" />
-import axios from "axios";
-
-const API = (import.meta as ImportMeta & { env: Record<string, string> }).env?.VITE_API_URL ?? "";
-
-function authHeader() {
-  const token = localStorage.getItem("accessToken");
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
+import { axiosInstance as axios } from "./axiosInstance";
 
 export interface Employee {
   id: string;
@@ -41,24 +33,19 @@ export async function fetchEmployees(params?: {
   if (params?.search) qp.set("search", params.search);
   if (params?.status) qp.set("status", params.status);
 
-  const { data } = await axios.get<Employee[]>(`${API}/api/employees`, {
+  const { data } = await axios.get<Employee[]>(`/api/employees`, {
     params: qp,
-    headers: authHeader(),
   });
   return data;
 }
 
 export async function getEmployee(id: string): Promise<Employee> {
-  const { data } = await axios.get<Employee>(`${API}/api/employees/${id}`, {
-    headers: authHeader(),
-  });
+  const { data } = await axios.get<Employee>(`/api/employees/${id}`);
   return data;
 }
 
 export async function createEmployee(payload: CreateEmployeePayload): Promise<Employee> {
-  const { data } = await axios.post<Employee>(`${API}/api/employees`, payload, {
-    headers: authHeader(),
-  });
+  const { data } = await axios.post<Employee>(`/api/employees`, payload);
   return data;
 }
 
@@ -66,21 +53,18 @@ export async function updateEmployee(
   id: string,
   payload: UpdateEmployeePayload
 ): Promise<Employee> {
-  const { data } = await axios.put<Employee>(`${API}/api/employees/${id}`, payload, {
-    headers: authHeader(),
-  });
+  const { data } = await axios.put<Employee>(`/api/employees/${id}`, payload);
   return data;
 }
 
 export async function deactivateEmployee(id: string): Promise<void> {
-  await axios.delete(`${API}/api/employees/${id}`, { headers: authHeader() });
+  await axios.delete(`/api/employees/${id}`);
 }
 
 export async function reactivateEmployee(id: string): Promise<Employee> {
   const { data } = await axios.post<Employee>(
-    `${API}/api/employees/${id}/reactivate`,
-    {},
-    { headers: authHeader() }
+    `/api/employees/${id}/reactivate`,
+    {}
   );
   return data;
 }
