@@ -1,0 +1,10 @@
+{
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:e2e:mobile-chrome": "playwright test --project='Mobile Chrome'",
+    "test:e2e:mobile-safari": "playwright test --project='Mobile Safari'"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1"
+  }
+}
