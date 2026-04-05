@@ -1,12 +1,9 @@
 /// <reference types="vite/client" />
-import axios from "axios";
+import { axiosInstance as axios, getToken } from "./axiosInstance";
 
-const API = (import.meta as ImportMeta & { env: Record<string, string> }).env?.VITE_API_URL ?? "";
-
-function authHeader() {
-  const token = localStorage.getItem("accessToken");
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
+const BASE_URL =
+  (import.meta as ImportMeta & { env: Record<string, string> }).env
+    ?.VITE_API_URL ?? "";
 
 export interface HoursRow {
   employeeId: string;
@@ -24,25 +21,23 @@ export interface UnfilledShift {
 }
 
 export async function fetchHoursReport(weekStart: string): Promise<HoursRow[]> {
-  const { data } = await axios.get<HoursRow[]>(`${API}/api/reports/hours`, {
+  const { data } = await axios.get<HoursRow[]>(`/api/reports/hours`, {
     params: { weekStart },
-    headers: authHeader(),
   });
   return data;
 }
 
 export async function fetchUnfilledReport(weekStart: string): Promise<UnfilledShift[]> {
-  const { data } = await axios.get<UnfilledShift[]>(`${API}/api/reports/unfilled`, {
+  const { data } = await axios.get<UnfilledShift[]>(`/api/reports/unfilled`, {
     params: { weekStart },
-    headers: authHeader(),
   });
   return data;
 }
 
 export async function downloadScheduleCsv(weekStart: string): Promise<void> {
-  const token = localStorage.getItem("accessToken");
+  const token = getToken();
   const response = await fetch(
-    `${API}/api/reports/schedule/csv?weekStart=${encodeURIComponent(weekStart)}`,
+    `${BASE_URL}/api/reports/schedule/csv?weekStart=${encodeURIComponent(weekStart)}`,
     {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     }
