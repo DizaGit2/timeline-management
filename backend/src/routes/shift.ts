@@ -29,6 +29,7 @@ router.get("/:id/conflicts", asyncHandler(getShiftConflicts));
 
 // Write endpoints — Manager and Admin only
 router.post("/", requireRole("MANAGER", "ADMIN"), validate(createShiftSchema), asyncHandler(createShift));
+router.patch("/:id", requireRole("MANAGER", "ADMIN"), validate(updateShiftSchema), asyncHandler(updateShift));
 router.put("/:id", requireRole("MANAGER", "ADMIN"), validate(updateShiftSchema), asyncHandler(updateShift));
 router.delete("/:id", requireRole("MANAGER", "ADMIN"), asyncHandler(deleteShift));
 router.post(

@@ -20,6 +20,10 @@ export const assignEmployeesSchema = z.object({
   employeeIds: z.array(z.string().uuid()).min(1),
 });
 
+// Schema for nested route POST /api/schedules/:scheduleId/shifts (scheduleId from URL)
+export const createNestedShiftSchema = createShiftSchema.omit({ scheduleId: true });
+
 export type CreateShiftInput = z.infer<typeof createShiftSchema>;
+export type CreateNestedShiftInput = z.infer<typeof createNestedShiftSchema>;
 export type UpdateShiftInput = z.infer<typeof updateShiftSchema>;
 export type AssignEmployeesInput = z.infer<typeof assignEmployeesSchema>;
