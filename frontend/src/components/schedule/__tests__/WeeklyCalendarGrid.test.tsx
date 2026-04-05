@@ -33,12 +33,12 @@ describe("WeeklyCalendarGrid — Rendering", () => {
       <WeeklyCalendarGrid shifts={mockShifts} weekStart={WEEK_START} onShiftMove={vi.fn()} />
     );
 
-    // shift-1 is on Tuesday 2026-04-07 (index 3 = Tue in Sun-indexed week)
-    const tuesdayCol = screen.getByTestId("day-col-3");
+    // shift-1 is on Tuesday 2026-04-07 — offset 1 from Mon Apr 6 weekStart → col 1
+    const tuesdayCol = screen.getByTestId("day-col-1");
     expect(within(tuesdayCol).getByText("Morning Shift")).toBeInTheDocument();
 
-    // shift-3 is on Thursday 2026-04-09
-    const thursdayCol = screen.getByTestId("day-col-5");
+    // shift-3 is on Thursday 2026-04-09 — offset 3 from Mon Apr 6 → col 3
+    const thursdayCol = screen.getByTestId("day-col-3");
     expect(within(thursdayCol).getByText(/Morning Shift/i)).toBeInTheDocument();
   });
 
@@ -121,8 +121,8 @@ describe("WeeklyCalendarGrid — Rendering", () => {
       <WeeklyCalendarGrid shifts={mockShifts} weekStart={WEEK_START} onShiftMove={vi.fn()} />
     );
 
-    // shift-1 and shift-2 are both on Tuesday
-    const tuesdayCol = screen.getByTestId("day-col-3");
+    // shift-1 and shift-2 are both on Tuesday Apr 7 → col 1 (offset 1 from Apr 6)
+    const tuesdayCol = screen.getByTestId("day-col-1");
     expect(within(tuesdayCol).getAllByTestId(/shift-block/)).toHaveLength(2);
   });
 });
