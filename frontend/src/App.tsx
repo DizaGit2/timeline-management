@@ -9,6 +9,7 @@ import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { ShiftsPage } from './pages/ShiftsPage'
 import { SchedulePage } from './pages/SchedulePage'
+import { SchedulesPage } from './pages/SchedulesPage'
 import { EmployeesPage } from './pages/EmployeesPage'
 import { MySchedulePage } from './pages/MySchedulePage'
 import { AvailabilityPage } from './pages/AvailabilityPage'
@@ -40,6 +41,7 @@ export function App() {
           <Route element={<PrivateRoute roles={['ADMIN', 'MANAGER']} />}>
             <Route path="/shifts" element={<ShiftsPage />} />
             <Route path="/schedule" element={<SchedulePage />} />
+            <Route path="/schedules" element={<SchedulesPage />} />
             <Route path="/employees" element={<EmployeesPage />} />
             <Route path="/reports" element={<ReportsPage />} />
           </Route>

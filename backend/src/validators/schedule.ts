@@ -4,6 +4,8 @@ export const createScheduleSchema = z.object({
   name: z.string().min(1),
   startDate: z.string().datetime(),
   endDate: z.string().datetime(),
+  location: z.string().min(1).optional(),
+  teamId: z.string().uuid().optional(),
   status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional(),
 });
 

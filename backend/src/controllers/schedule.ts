@@ -8,6 +8,7 @@ export async function listSchedules(req: Request, res: Response): Promise<void> 
 
   const schedules = await prisma.schedule.findMany({
     where: { organizationId },
+    include: { team: true },
     orderBy: { startDate: "desc" },
   });
 
@@ -20,7 +21,7 @@ export async function getSchedule(req: Request, res: Response): Promise<void> {
 
   const schedule = await prisma.schedule.findFirst({
     where: { id, organizationId },
-    include: { shifts: { include: { employee: true } } },
+    include: { team: true, shifts: { include: { employee: true } } },
   });
 
   if (!schedule) {
@@ -34,11 +35,28 @@ export async function createSchedule(req: Request, res: Response): Promise<void>
   const organizationId = req.user!.organizationId;
   const data = req.body as CreateScheduleInput;
 
+  const start = new Date(data.startDate);
+  const end = new Date(data.endDate);
+  if (end <= start) {
+    throw new AppError(400, "endDate must be after startDate");
+  }
+
+  if (data.teamId) {
+    const team = await prisma.team.findFirst({
+      where: { id: data.teamId, organizationId },
+    });
+    if (!team) {
+      throw new AppError(404, "Team not found");
+    }
+  }
+
   const schedule = await prisma.schedule.create({
     data: {
       name: data.name,
       startDate: new Date(data.startDate),
       endDate: new Date(data.endDate),
+      location: data.location,
+      teamId: data.teamId,
       status: data.status || "DRAFT",
       organizationId,
     },
@@ -60,10 +78,23 @@ export async function updateSchedule(req: Request, res: Response): Promise<void>
     throw new AppError(404, "Schedule not found");
   }
 
+  if (data.teamId !== undefined) {
+    if (data.teamId !== null) {
+      const team = await prisma.team.findFirst({
+        where: { id: data.teamId, organizationId },
+      });
+      if (!team) {
+        throw new AppError(404, "Team not found");
+      }
+    }
+  }
+
   const updateData: Record<string, unknown> = {};
   if (data.name !== undefined) updateData.name = data.name;
   if (data.startDate !== undefined) updateData.startDate = new Date(data.startDate);
   if (data.endDate !== undefined) updateData.endDate = new Date(data.endDate);
+  if (data.location !== undefined) updateData.location = data.location;
+  if (data.teamId !== undefined) updateData.teamId = data.teamId;
   if (data.status !== undefined) updateData.status = data.status;
 
   const schedule = await prisma.schedule.update({

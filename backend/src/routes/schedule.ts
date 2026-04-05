@@ -16,6 +16,7 @@ router.get("/:id", asyncHandler(getSchedule));
 // Write endpoints — Manager and Admin only
 router.post("/copy-week", requireRole("MANAGER", "ADMIN"), validate(copyWeekSchema), asyncHandler(copyWeek));
 router.post("/", requireRole("MANAGER", "ADMIN"), validate(createScheduleSchema), asyncHandler(createSchedule));
+router.patch("/:id", requireRole("MANAGER", "ADMIN"), validate(updateScheduleSchema), asyncHandler(updateSchedule));
 router.put("/:id", requireRole("MANAGER", "ADMIN"), validate(updateScheduleSchema), asyncHandler(updateSchedule));
 router.delete("/:id", requireRole("MANAGER", "ADMIN"), asyncHandler(deleteSchedule));
 
