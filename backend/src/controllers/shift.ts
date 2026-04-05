@@ -3,6 +3,7 @@ import prisma from "../lib/prisma";
 import { AppError } from "../middleware/errorHandler";
 import {
   CreateShiftInput,
+  CreateNestedShiftInput,
   UpdateShiftInput,
   AssignEmployeesInput,
 } from "../validators/shift";
@@ -90,6 +91,33 @@ export async function getShift(req: Request, res: Response): Promise<void> {
   res.json(shift);
 }
 
+async function checkOverlap(
+  employeeId: string,
+  startTime: Date,
+  endTime: Date,
+  excludeShiftId?: string
+): Promise<void> {
+  const where: Record<string, unknown> = {
+    startTime: { lt: endTime },
+    endTime: { gt: startTime },
+    OR: [
+      { employeeId },
+      { assignments: { some: { employeeId } } },
+    ],
+  };
+  if (excludeShiftId) {
+    where.id = { not: excludeShiftId };
+  }
+
+  const overlapping = await prisma.shift.findFirst({ where });
+  if (overlapping) {
+    throw new AppError(
+      409,
+      "Employee already has an overlapping shift during this time period"
+    );
+  }
+}
+
 export async function createShift(req: Request, res: Response): Promise<void> {
   const organizationId = req.user!.organizationId;
   const data = req.body as CreateShiftInput;
@@ -104,6 +132,12 @@ export async function createShift(req: Request, res: Response): Promise<void> {
       where: { id: data.employeeId, organizationId },
     });
     if (!employee) throw new AppError(404, "Employee not found");
+
+    await checkOverlap(
+      data.employeeId,
+      new Date(data.startTime),
+      new Date(data.endTime)
+    );
   }
 
   const shift = await prisma.shift.create({
@@ -122,6 +156,67 @@ export async function createShift(req: Request, res: Response): Promise<void> {
   });
 
   res.status(201).json(shift);
+}
+
+// POST /api/schedules/:scheduleId/shifts — nested create
+export async function createNestedShift(req: Request, res: Response): Promise<void> {
+  const organizationId = req.user!.organizationId;
+  const scheduleId = req.params.scheduleId as string;
+  const data = req.body as CreateNestedShiftInput;
+
+  const schedule = await prisma.schedule.findFirst({
+    where: { id: scheduleId, organizationId },
+  });
+  if (!schedule) throw new AppError(404, "Schedule not found");
+
+  if (data.employeeId) {
+    const employee = await prisma.employee.findFirst({
+      where: { id: data.employeeId, organizationId },
+    });
+    if (!employee) throw new AppError(404, "Employee not found");
+
+    await checkOverlap(
+      data.employeeId,
+      new Date(data.startTime),
+      new Date(data.endTime)
+    );
+  }
+
+  const shift = await prisma.shift.create({
+    data: {
+      scheduleId,
+      employeeId: data.employeeId ?? null,
+      title: data.title,
+      startTime: new Date(data.startTime),
+      endTime: new Date(data.endTime),
+      location: data.location,
+      role: data.role,
+      requiredHeadcount: data.requiredHeadcount ?? 1,
+      notes: data.notes,
+    },
+    include: shiftInclude,
+  });
+
+  res.status(201).json(shift);
+}
+
+// GET /api/schedules/:scheduleId/shifts — nested list
+export async function listScheduleShifts(req: Request, res: Response): Promise<void> {
+  const organizationId = req.user!.organizationId;
+  const scheduleId = req.params.scheduleId as string;
+
+  const schedule = await prisma.schedule.findFirst({
+    where: { id: scheduleId, organizationId },
+  });
+  if (!schedule) throw new AppError(404, "Schedule not found");
+
+  const shifts = await prisma.shift.findMany({
+    where: { scheduleId },
+    include: shiftInclude,
+    orderBy: { startTime: "asc" },
+  });
+
+  res.json(shifts);
 }
 
 export async function updateShift(req: Request, res: Response): Promise<void> {

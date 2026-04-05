@@ -1,15 +1,21 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import { listSchedules, getSchedule, createSchedule, updateSchedule, deleteSchedule, copyWeek } from "../controllers/schedule";
+import { listScheduleShifts, createNestedShift } from "../controllers/shift";
 import { validate } from "../middleware/validate";
 import { authGuard, requireRole } from "../middleware/authGuard";
 import { createScheduleSchema, updateScheduleSchema, copyWeekSchema } from "../validators/schedule";
+import { createNestedShiftSchema } from "../validators/shift";
 import { asyncHandler } from "../lib/asyncHandler";
 
 const router = Router();
 
 router.use(authGuard);
 router.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }));
+
+// Nested shift endpoints — schedule drill-down (TIM-184)
+router.get("/:scheduleId/shifts", asyncHandler(listScheduleShifts));
+router.post("/:scheduleId/shifts", requireRole("MANAGER", "ADMIN"), validate(createNestedShiftSchema), asyncHandler(createNestedShift));
 
 // Read endpoints — any authenticated user
 router.get("/", asyncHandler(listSchedules));
