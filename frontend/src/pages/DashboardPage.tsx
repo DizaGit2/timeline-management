@@ -16,7 +16,7 @@ export function DashboardPage() {
     if (!isManagerOrAdmin) return
     setStatsLoading(true)
     fetchDashboardStats()
-      .then((data) => {
+      .then((data: DashboardStats) => {
         setStats(data)
       })
       .catch(() => {
