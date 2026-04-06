@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchShifts, Shift } from "../api/shifts";
 import { WeeklyCalendarGrid } from "../components/schedule/WeeklyCalendarGrid";
 import { WeekNavigator } from "../components/schedule/WeekNavigator";
+import { ClockWidget } from "../components/ClockWidget";
 
 function getWeekStart(date: Date): Date {
   const d = new Date(date);
@@ -58,6 +59,8 @@ export function MySchedulePage() {
           </button>
         </div>
       </div>
+
+      <ClockWidget />
 
       {view === "month" ? (
         <div data-testid="month-view-placeholder" style={s.placeholder}>

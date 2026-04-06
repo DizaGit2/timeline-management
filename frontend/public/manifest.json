@@ -1,0 +1,10 @@
+{
+  "name": "Timeline Management",
+  "short_name": "Timeline",
+  "description": "Workforce scheduling and clock-in management",
+  "start_url": "/my-schedule",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#4f46e5",
+  "icons": []
+}
