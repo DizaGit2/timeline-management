@@ -10,7 +10,6 @@ import {
   CreateEmployeePayload,
 } from "../api/employees";
 import { useAuth } from "../contexts/AuthContext";
-import { Navbar } from "../components/Navbar";
 
 interface FormState {
   firstName: string;
@@ -153,7 +152,6 @@ export function EmployeesPage() {
 
   return (
     <div style={s.pageWrapper}>
-      <Navbar />
       <div style={s.page}>
       {/* Header */}
       <div style={s.header}>

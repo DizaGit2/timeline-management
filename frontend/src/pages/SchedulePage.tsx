@@ -5,7 +5,6 @@ import { WeeklyCalendarGrid, ShiftMoveEvent } from "../components/schedule/Weekl
 import { WeekNavigator } from "../components/schedule/WeekNavigator";
 import { ShiftFilter, FilterState } from "../components/schedule/ShiftFilter";
 import { CopyWeekModal } from "../components/schedule/CopyWeekModal";
-import { Navbar } from "../components/Navbar";
 
 function getWeekStart(date: Date): Date {
   const d = new Date(date);
@@ -45,7 +44,6 @@ export function SchedulePage() {
 
   return (
     <div style={s.pageWrapper}>
-      <Navbar />
       <div style={s.page}>
       <div style={s.header}>
         <div>
