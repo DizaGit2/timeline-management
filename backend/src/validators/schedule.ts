@@ -9,10 +9,12 @@ const scheduleBaseSchema = z.object({
   status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional(),
 });
 
-export const createScheduleSchema = scheduleBaseSchema.refine(
-  (data) => new Date(data.endDate) > new Date(data.startDate),
-  { message: "endDate must be after startDate", path: ["endDate"] },
-);
+export const createScheduleSchema = scheduleBaseSchema
+  .omit({ status: true })
+  .refine(
+    (data) => new Date(data.endDate) > new Date(data.startDate),
+    { message: "endDate must be after startDate", path: ["endDate"] },
+  );
 
 export const updateScheduleSchema = scheduleBaseSchema.partial();
 

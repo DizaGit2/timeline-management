@@ -46,3 +46,13 @@ export async function updateSchedule(
 export async function deleteSchedule(id: string): Promise<void> {
   await axios.delete(`/api/schedules/${id}`);
 }
+
+export async function publishSchedule(id: string): Promise<Schedule> {
+  const { data } = await axios.post<Schedule>(`/api/schedules/${id}/publish`);
+  return data;
+}
+
+export async function getShiftCount(id: string): Promise<{ count: number }> {
+  const { data } = await axios.get<{ count: number }>(`/api/schedules/${id}/shift-count`);
+  return data;
+}

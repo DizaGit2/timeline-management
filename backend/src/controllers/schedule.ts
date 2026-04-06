@@ -72,7 +72,7 @@ export async function createSchedule(req: Request, res: Response): Promise<void>
       endDate: new Date(data.endDate),
       location: data.location,
       teamId: data.teamId,
-      status: data.status || "DRAFT",
+      status: "DRAFT",
       organizationId,
     },
   });
@@ -142,6 +142,49 @@ export async function deleteSchedule(req: Request, res: Response): Promise<void>
   await prisma.schedule.delete({ where: { id } });
 
   res.status(204).send();
+}
+
+export async function publishSchedule(req: Request, res: Response): Promise<void> {
+  const organizationId = req.user!.organizationId;
+  const id = req.params.id as string;
+
+  const existing = await prisma.schedule.findFirst({
+    where: { id, organizationId },
+  });
+
+  if (!existing) {
+    throw new AppError(404, "Schedule not found");
+  }
+
+  if (existing.status !== "DRAFT") {
+    throw new AppError(400, "Only DRAFT schedules can be published");
+  }
+
+  const schedule = await prisma.schedule.update({
+    where: { id },
+    data: { status: "PUBLISHED" },
+  });
+
+  res.json(schedule);
+}
+
+export async function getShiftCount(req: Request, res: Response): Promise<void> {
+  const organizationId = req.user!.organizationId;
+  const id = req.params.id as string;
+
+  const existing = await prisma.schedule.findFirst({
+    where: { id, organizationId },
+  });
+
+  if (!existing) {
+    throw new AppError(404, "Schedule not found");
+  }
+
+  const shiftCount = await prisma.shift.count({
+    where: { scheduleId: id },
+  });
+
+  res.json({ scheduleId: id, shiftCount });
 }
 
 export async function copyWeek(req: Request, res: Response): Promise<void> {

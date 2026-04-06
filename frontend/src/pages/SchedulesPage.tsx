@@ -5,6 +5,8 @@ import {
   createSchedule,
   updateSchedule,
   deleteSchedule,
+  publishSchedule,
+  getShiftCount,
   Schedule,
   CreateSchedulePayload,
 } from "../api/schedules";
@@ -13,14 +15,12 @@ interface FormState {
   name: string;
   startDate: string;
   endDate: string;
-  status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
 }
 
 const emptyForm: FormState = {
   name: "",
   startDate: "",
   endDate: "",
-  status: "DRAFT",
 };
 
 function formatDate(iso: string) {
@@ -39,10 +39,18 @@ export function SchedulesPage() {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [formError, setFormError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Schedule | null>(null);
+  const [publishTarget, setPublishTarget] = useState<Schedule | null>(null);
 
   const { data: schedules = [], isLoading, error } = useQuery({
     queryKey: ["schedules"],
     queryFn: fetchSchedules,
+  });
+
+  const { data: shiftCountData } = useQuery({
+    queryKey: ["schedule-shift-count", deleteTarget?.id],
+    queryFn: () => getShiftCount(deleteTarget!.id),
+    enabled: !!deleteTarget,
+    retry: false,
   });
 
   const createMutation = useMutation({
@@ -72,6 +80,14 @@ export function SchedulesPage() {
     },
   });
 
+  const publishMutation = useMutation({
+    mutationFn: (id: string) => publishSchedule(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["schedules"] });
+      setPublishTarget(null);
+    },
+  });
+
   function openCreate() {
     setEditingSchedule(null);
     setForm(emptyForm);
@@ -85,7 +101,6 @@ export function SchedulesPage() {
       name: schedule.name,
       startDate: schedule.startDate.slice(0, 10),
       endDate: schedule.endDate.slice(0, 10),
-      status: schedule.status,
     });
     setFormError(null);
     setModalOpen(true);
@@ -121,7 +136,6 @@ export function SchedulesPage() {
       name: form.name.trim(),
       startDate: new Date(form.startDate + "T00:00:00.000Z").toISOString(),
       endDate: new Date(form.endDate + "T23:59:59.999Z").toISOString(),
-      status: form.status,
     };
 
     if (editingSchedule) {
@@ -138,6 +152,11 @@ export function SchedulesPage() {
     PUBLISHED: { bg: "#d1fae5", color: "#065f46" },
     ARCHIVED: { bg: "#f3f4f6", color: "#6b7280" },
   };
+
+  const deleteShiftText =
+    shiftCountData !== undefined
+      ? `This will permanently delete ${shiftCountData.count} shift${shiftCountData.count !== 1 ? "s" : ""}.`
+      : "All shifts within this schedule will also be deleted.";
 
   return (
     <div style={s.pageWrapper}>
@@ -214,6 +233,14 @@ export function SchedulesPage() {
                       </span>
                     </td>
                     <td style={s.tdActions}>
+                      {schedule.status === "DRAFT" && (
+                        <button
+                          style={s.publishBtn}
+                          onClick={() => setPublishTarget(schedule)}
+                        >
+                          Publish
+                        </button>
+                      )}
                       <button
                         style={s.editBtn}
                         onClick={() => openEdit(schedule)}
@@ -242,6 +269,24 @@ export function SchedulesPage() {
             <h3 style={s.modalTitle}>
               {editingSchedule ? "Edit Schedule" : "New Schedule"}
             </h3>
+            {editingSchedule && (
+              <div style={s.statusBadgeRow}>
+                <span style={s.statusBadgeLabel}>Status</span>
+                <span
+                  style={{
+                    display: "inline-block",
+                    padding: "2px 10px",
+                    background: (statusColors[editingSchedule.status] ?? statusColors.DRAFT).bg,
+                    color: (statusColors[editingSchedule.status] ?? statusColors.DRAFT).color,
+                    borderRadius: 20,
+                    fontSize: 12,
+                    fontWeight: 500,
+                  }}
+                >
+                  {editingSchedule.status}
+                </span>
+              </div>
+            )}
             <form onSubmit={handleSubmit}>
               <label style={s.formLabel}>
                 Name *
@@ -275,18 +320,6 @@ export function SchedulesPage() {
                   />
                 </label>
               </div>
-              <label style={s.formLabel}>
-                Status
-                <select
-                  style={s.formInput}
-                  value={form.status}
-                  onChange={(e) => handleFormChange("status", e.target.value)}
-                >
-                  <option value="DRAFT">Draft</option>
-                  <option value="PUBLISHED">Published</option>
-                  <option value="ARCHIVED">Archived</option>
-                </select>
-              </label>
               {formError && (
                 <p style={{ color: "#dc2626", fontSize: 13, marginTop: 4 }}>
                   {formError}
@@ -317,6 +350,40 @@ export function SchedulesPage() {
         </div>
       )}
 
+      {/* Publish confirm */}
+      {publishTarget && (
+        <div style={s.backdrop} onClick={() => setPublishTarget(null)}>
+          <div style={s.confirmModal} onClick={(e) => e.stopPropagation()}>
+            <h3 style={s.confirmTitle}>Publish Schedule</h3>
+            <p style={s.confirmText}>
+              Publish <strong>"{publishTarget.name}"</strong>? Once published,
+              the schedule will be visible to all employees. This cannot be
+              undone from this screen.
+            </p>
+            {publishMutation.error && (
+              <p style={{ color: "#dc2626", fontSize: 13 }}>
+                Failed to publish schedule.
+              </p>
+            )}
+            <div style={s.confirmActions}>
+              <button
+                style={s.cancelBtn}
+                onClick={() => setPublishTarget(null)}
+              >
+                Cancel
+              </button>
+              <button
+                style={s.publishConfirmBtn}
+                disabled={publishMutation.isPending}
+                onClick={() => publishMutation.mutate(publishTarget.id)}
+              >
+                {publishMutation.isPending ? "Publishing..." : "Publish"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Delete confirm */}
       {deleteTarget && (
         <div style={s.backdrop} onClick={() => setDeleteTarget(null)}>
@@ -324,8 +391,8 @@ export function SchedulesPage() {
             <h3 style={s.confirmTitle}>Delete Schedule</h3>
             <p style={s.confirmText}>
               Are you sure you want to delete{" "}
-              <strong>"{deleteTarget.name}"</strong>? All shifts within this
-              schedule will also be deleted. This action cannot be undone.
+              <strong>"{deleteTarget.name}"</strong>? {deleteShiftText} This
+              action cannot be undone.
             </p>
             {deleteMutation.error && (
               <p style={{ color: "#dc2626", fontSize: 13 }}>
@@ -423,6 +490,17 @@ const s: Record<string, React.CSSProperties> = {
   td: { padding: "12px 14px", color: "#374151", verticalAlign: "top" },
   tdActions: { padding: "10px 14px", whiteSpace: "nowrap" as const },
   scheduleName: { fontWeight: 600, color: "#111827" },
+  publishBtn: {
+    marginRight: 6,
+    padding: "5px 12px",
+    border: "1px solid #6ee7b7",
+    borderRadius: 5,
+    background: "#f0fdf4",
+    cursor: "pointer",
+    fontSize: 13,
+    color: "#065f46",
+    fontWeight: 500,
+  },
   editBtn: {
     marginRight: 6,
     padding: "5px 12px",
@@ -461,6 +539,13 @@ const s: Record<string, React.CSSProperties> = {
     boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
   },
   modalTitle: { margin: "0 0 20px", fontSize: 18, fontWeight: 700, color: "#111827" },
+  statusBadgeRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 16,
+  },
+  statusBadgeLabel: { fontSize: 13, fontWeight: 500, color: "#374151" },
   formRow: {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
@@ -521,6 +606,16 @@ const s: Record<string, React.CSSProperties> = {
   confirmTitle: { margin: "0 0 8px", fontSize: 17, fontWeight: 600 },
   confirmText: { color: "#374151", fontSize: 14, marginBottom: 20, lineHeight: 1.5 },
   confirmActions: { display: "flex", justifyContent: "flex-end", gap: 10 },
+  publishConfirmBtn: {
+    padding: "8px 16px",
+    border: "none",
+    borderRadius: 6,
+    background: "#059669",
+    color: "#fff",
+    cursor: "pointer",
+    fontSize: 14,
+    fontWeight: 500,
+  },
   confirmDeleteBtn: {
     padding: "8px 16px",
     border: "none",

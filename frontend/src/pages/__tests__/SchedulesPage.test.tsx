@@ -59,6 +59,12 @@ function getConfirmModal() {
   return heading.parentElement!;
 }
 
+/** Finds the publish confirmation modal via its heading. */
+function getPublishModal() {
+  const heading = screen.getByRole("heading", { name: /publish schedule/i });
+  return heading.parentElement!;
+}
+
 function renderPage() {
   const qc = new QueryClient({
     defaultOptions: {
@@ -536,5 +542,180 @@ describe("SchedulesPage — delete schedule", () => {
       const confirmModal = getConfirmModal();
       expect(within(confirmModal).getByText(/failed to delete/i)).toBeInTheDocument();
     });
+  });
+
+  it("shows actual shift count in the delete dialog when the API returns a count", async () => {
+    server.use(
+      http.get("/api/schedules/:id/shift-count", () =>
+        HttpResponse.json({ count: 7 })
+      )
+    );
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await waitFor(() => screen.getByText("May Week 1"));
+    const deleteButtons = screen.getAllByRole("button", { name: /delete/i });
+    await user.click(deleteButtons[0]);
+
+    await waitFor(() => {
+      const confirmModal = getConfirmModal();
+      expect(within(confirmModal).getByText(/7 shifts/i)).toBeInTheDocument();
+    });
+  });
+
+  it("shows singular 'shift' when count is 1", async () => {
+    server.use(
+      http.get("/api/schedules/:id/shift-count", () =>
+        HttpResponse.json({ count: 1 })
+      )
+    );
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await waitFor(() => screen.getByText("May Week 1"));
+    const deleteButtons = screen.getAllByRole("button", { name: /delete/i });
+    await user.click(deleteButtons[0]);
+
+    await waitFor(() => {
+      const confirmModal = getConfirmModal();
+      expect(within(confirmModal).getByText(/1 shift\b/i)).toBeInTheDocument();
+    });
+  });
+
+  it("falls back to generic shift text when shift-count API fails", async () => {
+    server.use(
+      http.get("/api/schedules/:id/shift-count", () =>
+        HttpResponse.json({ error: "Server error" }, { status: 500 })
+      )
+    );
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await waitFor(() => screen.getByText("May Week 1"));
+    const deleteButtons = screen.getAllByRole("button", { name: /delete/i });
+    await user.click(deleteButtons[0]);
+
+    await waitFor(() => {
+      const confirmModal = getConfirmModal();
+      expect(
+        within(confirmModal).getByText(/all shifts within this schedule/i)
+      ).toBeInTheDocument();
+    });
+  });
+});
+
+// ── TC-FE-SCH-08: Publish flow ───────────────────────────────────────────────
+
+describe("SchedulesPage — publish schedule", () => {
+  beforeEach(() => {
+    server.use(
+      http.get("/api/schedules", () => HttpResponse.json(mockSchedules))
+    );
+  });
+
+  it("shows a Publish button only for DRAFT schedules", async () => {
+    renderPage();
+
+    await waitFor(() => screen.getByText("May Week 1"));
+
+    const publishButtons = screen.getAllByRole("button", { name: /^publish$/i });
+    // Only sched-2 is DRAFT; sched-1 is PUBLISHED so no publish button for it
+    expect(publishButtons).toHaveLength(1);
+  });
+
+  it("opens a publish confirmation modal when Publish is clicked", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await waitFor(() => screen.getByRole("button", { name: /^publish$/i }));
+    await user.click(screen.getByRole("button", { name: /^publish$/i }));
+
+    await waitFor(() => getPublishModal());
+    const modal = getPublishModal();
+    expect(within(modal).getByText(/May Week 2/)).toBeInTheDocument();
+  });
+
+  it("closes the publish modal when Cancel is clicked", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await waitFor(() => screen.getByRole("button", { name: /^publish$/i }));
+    await user.click(screen.getByRole("button", { name: /^publish$/i }));
+
+    await waitFor(() => getPublishModal());
+    await user.click(within(getPublishModal()).getByRole("button", { name: /cancel/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("heading", { name: /publish schedule/i })).not.toBeInTheDocument();
+    });
+  });
+
+  it("calls POST /api/schedules/:id/publish and refreshes the list on confirm", async () => {
+    let publishCalledId = "";
+    server.use(
+      http.post("/api/schedules/:id/publish", ({ params }) => {
+        publishCalledId = params.id as string;
+        return HttpResponse.json({ ...mockSchedules[1], status: "PUBLISHED" });
+      })
+    );
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await waitFor(() => screen.getByRole("button", { name: /^publish$/i }));
+    await user.click(screen.getByRole("button", { name: /^publish$/i }));
+
+    await waitFor(() => getPublishModal());
+    await user.click(within(getPublishModal()).getByRole("button", { name: /^publish$/i }));
+
+    await waitFor(() => {
+      expect(publishCalledId).toBe("sched-2");
+    });
+  });
+
+  it("shows an error when the publish API call fails", async () => {
+    server.use(
+      http.post("/api/schedules/:id/publish", () =>
+        HttpResponse.json({ error: "Server error" }, { status: 500 })
+      )
+    );
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await waitFor(() => screen.getByRole("button", { name: /^publish$/i }));
+    await user.click(screen.getByRole("button", { name: /^publish$/i }));
+
+    await waitFor(() => getPublishModal());
+    await user.click(within(getPublishModal()).getByRole("button", { name: /^publish$/i }));
+
+    await waitFor(() => {
+      expect(within(getPublishModal()).getByText(/failed to publish/i)).toBeInTheDocument();
+    });
+  });
+});
+
+// ── TC-FE-SCH-09: Create form — no status dropdown ───────────────────────────
+
+describe("SchedulesPage — create form has no status dropdown", () => {
+  beforeEach(() => {
+    server.use(
+      http.get("/api/schedules", () => HttpResponse.json([]))
+    );
+  });
+
+  it("does not render a status select in the create form", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await waitFor(() => screen.getAllByRole("button", { name: /new schedule|\+/i }));
+    const [firstBtn] = screen.getAllByRole("button", { name: /new schedule|\+/i });
+    await user.click(firstBtn);
+
+    await waitFor(() => screen.getByLabelText(/name/i));
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   });
 });
