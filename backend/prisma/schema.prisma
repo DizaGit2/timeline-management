@@ -36,9 +36,10 @@ model User {
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @updatedAt @map("updated_at")
 
-  organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  refreshTokens RefreshToken[]
-  notifications Notification[]
+  organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  refreshTokens   RefreshToken[]
+  notifications   Notification[]
+  resolvedSwaps   SwapRequest[]
 
   @@index([organizationId])
   @@map("users")
@@ -83,6 +84,8 @@ model Employee {
   availabilities            Availability[]
   unavailabilityExceptions  UnavailabilityException[]
   teamMemberships           TeamMember[]
+  requestingSwaps           SwapRequest[]             @relation("RequestingSwaps")
+  targetSwaps               SwapRequest[]             @relation("TargetSwaps")
 
   @@unique([organizationId, email])
   @@index([organizationId])
@@ -101,9 +104,10 @@ model Schedule {
   createdAt      DateTime       @default(now()) @map("created_at")
   updatedAt      DateTime       @updatedAt @map("updated_at")
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  team         Team?        @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  team         Team?         @relation(fields: [teamId], references: [id], onDelete: SetNull)
   shifts       Shift[]
+  swapRequests SwapRequest[]
 
   @@index([organizationId])
   @@index([status])
@@ -131,9 +135,11 @@ model Shift {
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
 
-  schedule    Schedule          @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
-  employee    Employee?         @relation(fields: [employeeId], references: [id], onDelete: SetNull)
-  assignments ShiftAssignment[]
+  schedule              Schedule          @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  employee              Employee?         @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  assignments           ShiftAssignment[]
+  requestingShiftSwaps  SwapRequest[]     @relation("RequestingShiftSwaps")
+  targetShiftSwaps      SwapRequest[]     @relation("TargetShiftSwaps")
 
   @@map("shifts")
 }
@@ -235,4 +241,39 @@ enum NotificationType {
   SHIFT_UPDATED
   SHIFT_REMOVED
   SCHEDULE_PUBLISHED
+}
+
+enum SwapRequestStatus {
+  PENDING_TARGET
+  PENDING_MANAGER
+  APPROVED
+  REJECTED
+  EXPIRED
+  CANCELLED
+}
+
+model SwapRequest {
+  id                   String            @id @default(uuid())
+  scheduleId           String            @map("schedule_id")
+  requestingEmployeeId String            @map("requesting_employee_id")
+  requestingShiftId    String            @map("requesting_shift_id")
+  targetEmployeeId     String            @map("target_employee_id")
+  targetShiftId        String            @map("target_shift_id")
+  status               SwapRequestStatus @default(PENDING_TARGET)
+  resolvedAt           DateTime?         @map("resolved_at")
+  resolvedBy           String?           @map("resolved_by")
+  createdAt            DateTime          @default(now()) @map("created_at")
+  updatedAt            DateTime          @updatedAt @map("updated_at")
+
+  schedule           Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  requestingEmployee Employee @relation("RequestingSwaps", fields: [requestingEmployeeId], references: [id], onDelete: Cascade)
+  requestingShift    Shift    @relation("RequestingShiftSwaps", fields: [requestingShiftId], references: [id], onDelete: Cascade)
+  targetEmployee     Employee @relation("TargetSwaps", fields: [targetEmployeeId], references: [id], onDelete: Cascade)
+  targetShift        Shift    @relation("TargetShiftSwaps", fields: [targetShiftId], references: [id], onDelete: Cascade)
+  resolver           User?    @relation(fields: [resolvedBy], references: [id], onDelete: SetNull)
+
+  @@index([status, scheduleId])
+  @@index([requestingEmployeeId])
+  @@index([targetEmployeeId])
+  @@map("swap_requests")
 }

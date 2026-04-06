@@ -12,6 +12,7 @@ import availabilityRoutes, { employeeAvailabilityRouter } from "./routes/availab
 import reportRoutes from "./routes/report";
 import notificationRoutes from "./routes/notification";
 import dashboardRoutes from "./routes/dashboard";
+import swapRequestRoutes from "./routes/swapRequest";
 
 const app = express();
 
@@ -37,6 +38,7 @@ app.use("/api/availability", availabilityRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/swap-requests", swapRequestRoutes);
 
 app.use(errorHandler);
 
