@@ -14,10 +14,12 @@ model Organization {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  users     User[]
-  employees Employee[]
-  schedules Schedule[]
-  teams     Team[]
+  users       User[]
+  employees   Employee[]
+  schedules   Schedule[]
+  teams       Team[]
+  timeEntries TimeEntry[]
+  clockEvents ClockEvent[]
 
   @@map("organizations")
 }
@@ -83,6 +85,8 @@ model Employee {
   availabilities            Availability[]
   unavailabilityExceptions  UnavailabilityException[]
   teamMemberships           TeamMember[]
+  timeEntries               TimeEntry[]
+  clockEvents               ClockEvent[]
 
   @@unique([organizationId, email])
   @@index([organizationId])
@@ -235,4 +239,62 @@ enum NotificationType {
   SHIFT_UPDATED
   SHIFT_REMOVED
   SCHEDULE_PUBLISHED
+}
+
+// ── Clock-In/Out & Offline Sync ────────────────────────────────────────────
+
+model TimeEntry {
+  id             String          @id @default(uuid())
+  employeeId     String          @map("employee_id")
+  organizationId String          @map("organization_id")
+  type           TimeEntryType
+  timestamp      DateTime
+  shiftId        String?         @map("shift_id")
+  notes          String?
+  source         String          @default("web") // web, mobile, kiosk
+  idempotencyKey String          @unique @map("idempotency_key")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+
+  employee     Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+  @@index([organizationId])
+  @@index([timestamp])
+  @@map("time_entries")
+}
+
+enum TimeEntryType {
+  CLOCK_IN
+  CLOCK_OUT
+}
+
+model ClockEvent {
+  id             String           @id @default(uuid())
+  employeeId     String           @map("employee_id")
+  organizationId String           @map("organization_id")
+  type           TimeEntryType
+  clientTimestamp DateTime         @map("client_timestamp")
+  idempotencyKey String           @unique @map("idempotency_key")
+  status         ClockEventStatus @default(PENDING)
+  errorMessage   String?          @map("error_message")
+  timeEntryId    String?          @map("time_entry_id")
+  receivedAt     DateTime         @default(now()) @map("received_at")
+  processedAt    DateTime?        @map("processed_at")
+
+  employee     Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+  @@index([organizationId])
+  @@index([status])
+  @@map("clock_events")
+}
+
+enum ClockEventStatus {
+  PENDING
+  PROCESSED
+  DUPLICATE
+  ERROR
 }
